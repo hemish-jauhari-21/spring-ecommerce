@@ -3,6 +3,7 @@ package com.demo.ecommerce.controller;
 import com.demo.ecommerce.dto.UserDTO;
 import com.demo.ecommerce.model.User;
 import com.demo.ecommerce.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,7 +16,7 @@ public class UserController {
     private UserService service;
 
     @PostMapping("/add")
-    public User createUser(@RequestBody UserDTO request) {
+    public User createUser(@Valid @RequestBody UserDTO request) {
         return service.saveUser(request);
     }
 
