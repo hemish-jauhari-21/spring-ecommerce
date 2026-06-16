@@ -14,7 +14,15 @@ import lombok.*;
 @ToString
 public class ProductDTO {
     private Long id;
+
     @NotBlank(message = "Product name cannot be blank !!")
     private String name;
+
     private Double price;
+    private String description;
+    private Integer stock;
+    private String category;
+
+    @NotBlank(message = "Image can't be displayed")
+    private String image_url;
 }
