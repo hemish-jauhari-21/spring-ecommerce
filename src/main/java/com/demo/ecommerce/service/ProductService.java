@@ -34,4 +34,25 @@ public class ProductService {
     public Optional<Product> getProductById(Long id) {
         return repository.findById(id);
     }
+
+    public void deleteProductById(Long id) {
+        if (!repository.existsById(id)) {
+            throw new RuntimeException("Product not found");
+        }
+        repository.deleteById(id);
+    }
+
+    public Product updateProduct(Long id, ProductDTO request) {
+        Product product = repository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Product Not FOund"));
+
+        product.setName(request.getName());
+        product.setPrice(request.getPrice());
+        product.setDescription(request.getDescription());
+        product.setCategory(request.getCategory());
+        product.setStock(request.getStock());
+        product.setImage_url(request.getImage_url());
+
+        return repository.save(product);
+    }
 }

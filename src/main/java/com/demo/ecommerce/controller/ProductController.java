@@ -30,4 +30,14 @@ public class ProductController {
     public Optional<Product> getProductById(@PathVariable Long id) {
         return service.getProductById(id);
     }
+
+    @DeleteMapping("/{id}")
+    public void deleteProductById(@PathVariable Long id) {
+        service.deleteProductById(id);
+    }
+
+    @PutMapping("/{id}")
+    public Product updateProduct(@PathVariable Long id, @Valid @RequestBody ProductDTO request) {
+        return service.updateProduct(id, request);
+    }
 }
