@@ -1,6 +1,8 @@
 package com.demo.ecommerce.service;
 
 import com.demo.ecommerce.dto.CartItemDTO;
+import com.demo.ecommerce.dto.CartItemResponseDTO;
+import com.demo.ecommerce.dto.ProductResponseDTO;
 import com.demo.ecommerce.model.Cart;
 import com.demo.ecommerce.model.CartItem;
 import com.demo.ecommerce.model.Product;
@@ -24,7 +26,27 @@ public class CartItemService {
     @Autowired
     private ProductRepository productRepository;
 
-    public CartItem addItem(CartItemDTO request) {
+    private CartItemResponseDTO convertToDTO(CartItem item) {
+        Product product = item.getProduct();
+
+        ProductResponseDTO productDTO = new ProductResponseDTO(
+                product.getId(),
+                product.getName(),
+                product.getPrice(),
+                product.getDescription(),
+                product.getStock(),
+                product.getCategory(),
+                product.getImage_url()
+        );
+
+        return new CartItemResponseDTO(
+                item.getId(),
+                productDTO,
+                item.getQuantity()
+        );
+    }
+
+    public CartItemResponseDTO addItem(CartItemDTO request) {
         Cart cart = cartRepository.findById(request.getCartId())
                 .orElseThrow(() -> new RuntimeException("Cart not found"));
 
@@ -41,7 +63,9 @@ public class CartItemService {
 
             item.setQuantity(item.getQuantity() + request.getQuantity());
 
-            return cartItemRepository.save(item);
+            CartItem savedItem = cartItemRepository.save(item);
+
+            return convertToDTO(savedItem);
         }
 
         CartItem item = new CartItem();
@@ -50,11 +74,14 @@ public class CartItemService {
         item.setProduct(product);
         item.setQuantity(request.getQuantity());
 
-        return cartItemRepository.save(item);
+        return convertToDTO(item);
     }
 
-    public List<CartItem> getAllItems() {
-        return cartItemRepository.findAll();
+    public List<CartItemResponseDTO> getAllItems() {
+        return cartItemRepository.findAll()
+                .stream()
+                .map(this::convertToDTO)
+                .toList();
     }
 
     public String deleteItem(Long id) {
@@ -67,14 +94,16 @@ public class CartItemService {
         return "Item deleted successfully";
     }
 
-    public CartItem updateQuantity(Long id, Integer quantity) {
+    public CartItemResponseDTO updateQuantity(Long id, Integer quantity) {
         CartItem item = cartItemRepository.findById(id)
                 .orElseThrow(() ->
                         new RuntimeException("Cart Item not found"));
 
         item.setQuantity(quantity);
 
-        return cartItemRepository.save(item);
+        CartItem savedItem = cartItemRepository.save(item);
+
+        return convertToDTO(savedItem);
     }
 }
 

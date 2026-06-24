@@ -1,6 +1,7 @@
 package com.demo.ecommerce.controller;
 
 import com.demo.ecommerce.dto.CartDTO;
+import com.demo.ecommerce.dto.CartResponseDTO;
 import com.demo.ecommerce.model.Cart;
 import com.demo.ecommerce.service.CartService;
 import jakarta.validation.Valid;
@@ -16,12 +17,12 @@ public class CartController {
     private CartService cartService;
 
     @PostMapping("/add")
-    public Cart createCart(@Valid @RequestBody CartDTO request) {
+    public CartResponseDTO createCart(@Valid @RequestBody CartDTO request) {
         return cartService.createCart(request);
     }
 
     @GetMapping("/{id}")
-    public Cart getCartById(@PathVariable Long id) {
+    public CartResponseDTO getCartById(@PathVariable Long id) {
         return cartService.getCartById(id);
     }
 }

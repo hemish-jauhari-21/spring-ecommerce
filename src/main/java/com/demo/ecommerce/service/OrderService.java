@@ -1,6 +1,8 @@
 package com.demo.ecommerce.service;
 
 import com.demo.ecommerce.dto.OrderDTO;
+import com.demo.ecommerce.dto.OrderResponseDTO;
+import com.demo.ecommerce.dto.UserResponseDTO;
 import com.demo.ecommerce.model.Order;
 import com.demo.ecommerce.model.User;
 import com.demo.ecommerce.repository.OrderRepository;
@@ -19,7 +21,7 @@ public class OrderService {
     @Autowired
     private UserRepository userRepository;
 
-    public Order createOrder(OrderDTO request) {
+    public OrderResponseDTO createOrder(OrderDTO request) {
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -30,6 +32,20 @@ public class OrderService {
         order.setTotalAmount(0.0);
         order.setCreatedAt(LocalDateTime.now());
 
-        return orderRepository.save(order);
+        Order saveOrder = orderRepository.save(order);
+
+        UserResponseDTO userResponseDTO = new UserResponseDTO(
+                user.getId(),
+                user.getName(),
+                user.getEmail()
+        );
+
+        return new OrderResponseDTO(
+                saveOrder.getId(),
+                userResponseDTO,
+                saveOrder.getTotalAmount(),
+                saveOrder.getStatus(),
+                saveOrder.getCreatedAt()
+        );
     }
 }

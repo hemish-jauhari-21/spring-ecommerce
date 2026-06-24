@@ -1,6 +1,7 @@
 package com.demo.ecommerce.controller;
 
 import com.demo.ecommerce.dto.CartItemDTO;
+import com.demo.ecommerce.dto.CartItemResponseDTO;
 import com.demo.ecommerce.model.CartItem;
 import com.demo.ecommerce.repository.CartItemRepository;
 import com.demo.ecommerce.service.CartItemService;
@@ -20,12 +21,12 @@ public class CartItemController {
     private CartItemRepository cartItemRepository;
 
     @PostMapping("/add")
-    public CartItem addItem(@Valid @RequestBody CartItemDTO request) {
+    public CartItemResponseDTO addItem(@Valid @RequestBody CartItemDTO request) {
         return cartItemService.addItem(request);
     }
 
     @GetMapping("/all")
-    public List<CartItem> getAllItems() {
+    public List<CartItemResponseDTO> getAllItems() {
         return cartItemService.getAllItems();
     }
 
@@ -42,7 +43,7 @@ public class CartItemController {
     }
 
     @PutMapping("/update/{id}")
-    public CartItem updateQuantity(@PathVariable Long id, @RequestParam Integer quantity) {
+    public CartItemResponseDTO updateQuantity(@PathVariable Long id, @RequestParam Integer quantity) {
         return cartItemService.updateQuantity(id, quantity);
     }
 }
