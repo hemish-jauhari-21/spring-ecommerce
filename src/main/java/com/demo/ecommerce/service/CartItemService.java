@@ -66,5 +66,15 @@ public class CartItemService {
 
         return "Item deleted successfully";
     }
+
+    public CartItem updateQuantity(Long id, Integer quantity) {
+        CartItem item = cartItemRepository.findById(id)
+                .orElseThrow(() ->
+                        new RuntimeException("Cart Item not found"));
+
+        item.setQuantity(quantity);
+
+        return cartItemRepository.save(item);
+    }
 }
 

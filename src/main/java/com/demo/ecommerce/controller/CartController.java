@@ -3,6 +3,7 @@ package com.demo.ecommerce.controller;
 import com.demo.ecommerce.dto.CartDTO;
 import com.demo.ecommerce.model.Cart;
 import com.demo.ecommerce.service.CartService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,7 +16,7 @@ public class CartController {
     private CartService cartService;
 
     @PostMapping("/add")
-    public Cart createCart(@RequestBody CartDTO request) {
+    public Cart createCart(@Valid @RequestBody CartDTO request) {
         return cartService.createCart(request);
     }
 
