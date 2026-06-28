@@ -59,4 +59,11 @@ public class CartService {
                 userResponseDTO
         );
     }
+
+    public Cart findByUserId(Long userId) {
+        Cart cart = cartRepository.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("Cart not found"));
+
+        return cart;
+    }
 }

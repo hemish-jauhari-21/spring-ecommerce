@@ -25,4 +25,9 @@ public class CartController {
     public CartResponseDTO getCartById(@PathVariable Long id) {
         return cartService.getCartById(id);
     }
+
+    @GetMapping("/{userId}")
+    public Cart findByUserId(@PathVariable Long userId) {
+        return cartService.findByUserId(userId);
+    }
 }
