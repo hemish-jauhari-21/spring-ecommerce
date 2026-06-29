@@ -2,6 +2,7 @@ package com.demo.ecommerce.controller;
 
 import com.demo.ecommerce.dto.OrderDTO;
 import com.demo.ecommerce.dto.OrderResponseDTO;
+import com.demo.ecommerce.dto.PlaceOrderDTO;
 import com.demo.ecommerce.model.Order;
 import com.demo.ecommerce.service.OrderService;
 import jakarta.validation.Valid;
@@ -18,7 +19,9 @@ public class OrderController {
     private OrderService orderService;
 
     @PostMapping("/place")
-    public OrderResponseDTO createOrder(@Valid @RequestBody OrderDTO request) {
-        return orderService.createOrder(request);
+    public OrderResponseDTO placeOrder(@Valid @RequestBody PlaceOrderDTO request) {
+        return orderService.placeOrder(request);
     }
+
+
 }
