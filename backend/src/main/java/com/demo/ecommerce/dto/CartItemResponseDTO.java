@@ -1,14 +1,14 @@
-package com.demo.ecommerce.dto;
+    package com.demo.ecommerce.dto;
 
-import lombok.*;
+    import lombok.*;
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-@ToString
-public class CartItemResponseDTO {
-    private Long id;
-    private ProductResponseDTO product;
-    private Integer quantity;
-}
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    @ToString
+    public class CartItemResponseDTO {
+        private Long id;
+        private ProductResponseDTO product;
+        private Integer quantity;
+    }

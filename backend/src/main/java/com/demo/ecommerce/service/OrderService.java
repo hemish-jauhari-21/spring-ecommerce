@@ -1,9 +1,6 @@
 package com.demo.ecommerce.service;
 
-import com.demo.ecommerce.dto.OrderDTO;
-import com.demo.ecommerce.dto.OrderResponseDTO;
-import com.demo.ecommerce.dto.PlaceOrderDTO;
-import com.demo.ecommerce.dto.UserResponseDTO;
+import com.demo.ecommerce.dto.*;
 import com.demo.ecommerce.model.*;
 import com.demo.ecommerce.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
