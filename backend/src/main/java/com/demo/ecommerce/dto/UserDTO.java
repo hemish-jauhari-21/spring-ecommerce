@@ -1,5 +1,6 @@
 package com.demo.ecommerce.dto;
 
+import com.demo.ecommerce.model.Role;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -30,6 +31,6 @@ public class UserDTO {
     )
     private String password;
 
-    @NotBlank(message = "Role is required either Admin or User")
-    private String role;
+//    @NotBlank(message = "Role is required either Admin or User")
+    private Role role;
 }

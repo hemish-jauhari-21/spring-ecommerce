@@ -4,6 +4,7 @@ import com.demo.ecommerce.dto.UserDTO;
 import com.demo.ecommerce.model.User;
 import com.demo.ecommerce.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -14,12 +15,15 @@ public class UserService {
     @Autowired
     private UserRepository repository;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     public User saveUser(UserDTO request) {
         User newUser = new User();
 
         newUser.setName(request.getName());
         newUser.setEmail(request.getEmail());
-        newUser.setPassword(request.getPassword());
+        newUser.setPassword(passwordEncoder.encode(request.getPassword()));
         newUser.setRole(request.getRole());
 
         return repository.save(newUser);
@@ -51,7 +55,7 @@ public class UserService {
 
         user.setName(request.getName());
         user.setEmail(request.getEmail());
-        user.setPassword(request.getPassword());
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(request.getRole());
 
         return repository.save(user);
