@@ -7,7 +7,7 @@ import ProductCard from "../components/ProductCard";
 
 function Products() {
 
-    const [products, setProducts] = useState<Product[]>([]);
+    const [products, setProducts] = useState([]);
 
     useEffect(() => {
         const fetchProducts = async () => {
