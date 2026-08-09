@@ -61,26 +61,52 @@ public class OrderService {
 
     @Transactional
     public OrderResponseDTO placeOrder(PlaceOrderDTO request) {
-        // Find user's cart
+
+        // 1. Find user's cart
         Cart cart = cartRepository.findByUserId(request.getUserId())
-                .orElseThrow(() -> new RuntimeException("Cart not found"));
+                .orElseThrow(() ->
+                        new RuntimeException("Cart not found"));
 
-        // Get all items from the cart
-        List<CartItem> cartItems = cartItemRepository.findByCartId(cart.getId());
 
-        // Check if cart is empty
+        // 2. Get cart items
+        List<CartItem> cartItems =
+                cartItemRepository.findByCartId(cart.getId());
+
+
+        // 3. Check if cart is empty
         if (cartItems.isEmpty()) {
             throw new RuntimeException("Cart is empty");
         }
 
-        // Calculate total Amount
-        double totalAmount = 0;
 
-        for (CartItem item: cartItems) {
-            totalAmount += item.getProduct().getPrice() * item.getQuantity();
+        // 4. Check stock BEFORE creating the order
+        for (CartItem cartItem : cartItems) {
+
+            Product product = cartItem.getProduct();
+
+            if (product.getStock() < cartItem.getQuantity()) {
+
+                throw new RuntimeException(
+                        product.getName()
+                                + " has insufficient stock. Available: "
+                                + product.getStock()
+                );
+            }
         }
 
-        // Create new order
+
+        // 5. Calculate total amount
+        double totalAmount = 0;
+
+        for (CartItem cartItem : cartItems) {
+
+            totalAmount +=
+                    cartItem.getProduct().getPrice()
+                            * cartItem.getQuantity();
+        }
+
+
+        // 6. Create Order
         Order order = new Order();
 
         order.setUser(cart.getUser());
@@ -88,47 +114,63 @@ public class OrderService {
         order.setStatus("PENDING");
         order.setCreatedAt(LocalDateTime.now());
 
-        Order savedOrder = orderRepository.save(order);
+        Order savedOrder =
+                orderRepository.save(order);
 
-        // Create OrderItems
-        for (CartItem cartItem: cartItems) {
 
-            // Get product
-            Product product = cartItem.getProduct();
+        // 7. Create OrderItems + reduce stock
+        for (CartItem cartItem : cartItems) {
 
-            // Check stock
-            if (product.getStock() < cartItem.getQuantity()) {
-                throw new RuntimeException(
-                        product.getName() + "is out of stock"
-                );
-            }
+            Product product =
+                    cartItem.getProduct();
+
 
             // Create OrderItem
-            OrderItem orderItem = new OrderItem();
+            OrderItem orderItem =
+                    new OrderItem();
 
             orderItem.setOrder(savedOrder);
-            orderItem.setProduct(cartItem.getProduct());
-            orderItem.setQuantity(cartItem.getQuantity());
-            orderItem.setPrice(cartItem.getProduct().getPrice());
+
+            orderItem.setProduct(product);
+
+            orderItem.setQuantity(
+                    cartItem.getQuantity()
+            );
+
+            orderItem.setPrice(
+                    product.getPrice()
+            );
+
 
             orderItemRepository.save(orderItem);
 
-            // Reduce stock
-            product.setStock(product.getStock() - cartItem.getQuantity());
 
-            // Save updated product
+            // Reduce stock
+            product.setStock(
+                    product.getStock()
+                            - cartItem.getQuantity()
+            );
+
             productRepository.save(product);
         }
 
-        // Clear Cart
+
+        // 8. Clear cart
         cartItemRepository.deleteAll(cartItems);
 
-        UserResponseDTO userResponseDTO = new UserResponseDTO(
-                savedOrder.getUser().getId(),
-                savedOrder.getUser().getName(),
-                savedOrder.getUser().getEmail()
-        );
 
+        // 9. Prepare user response
+        User user = savedOrder.getUser();
+
+        UserResponseDTO userResponseDTO =
+                new UserResponseDTO(
+                        user.getId(),
+                        user.getName(),
+                        user.getEmail()
+                );
+
+
+        // 10. Return response
         return new OrderResponseDTO(
                 savedOrder.getId(),
                 userResponseDTO,
@@ -136,5 +178,32 @@ public class OrderService {
                 savedOrder.getStatus(),
                 savedOrder.getCreatedAt()
         );
+    }
+
+    public List<OrderResponseDTO> getOrdersByUser(Long userId) {
+        List<Order> orders = orderRepository.findByUserId(userId);
+
+        return orders.stream()
+                .map(order -> {
+
+                    User user = order.getUser();
+
+                    UserResponseDTO userResponseDTO =
+                            new UserResponseDTO(
+                                    user.getId(),
+                                    user.getName(),
+                                    user.getEmail()
+                            );
+
+                    return new OrderResponseDTO(
+                            order.getId(),
+                            userResponseDTO,
+                            order.getTotalAmount(),
+                            order.getStatus(),
+                            order.getCreatedAt()
+                    );
+
+                })
+                .toList();
     }
 }

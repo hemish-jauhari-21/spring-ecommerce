@@ -7,10 +7,9 @@ import com.demo.ecommerce.model.Order;
 import com.demo.ecommerce.service.OrderService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/ecommerce/order")
@@ -23,5 +22,10 @@ public class OrderController {
         return orderService.placeOrder(request);
     }
 
+    @GetMapping("/user/{userId}")
+    public List<OrderResponseDTO> getOrdersByUser(
+            @PathVariable Long userId) {
 
+        return orderService.getOrdersByUser(userId);
+    }
 }

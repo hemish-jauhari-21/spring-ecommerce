@@ -1,5 +1,6 @@
 package com.demo.ecommerce.dto;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 @Getter
@@ -8,5 +9,6 @@ import lombok.*;
 @AllArgsConstructor
 @ToString
 public class PlaceOrderDTO {
+    @NotNull
     private Long userId;
 }

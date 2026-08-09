@@ -74,7 +74,8 @@ public class CartItemService {
         item.setProduct(product);
         item.setQuantity(request.getQuantity());
 
-        return convertToDTO(item);
+        CartItem savedItem = cartItemRepository.save(item);
+        return convertToDTO(savedItem);
     }
 
     public List<CartItemResponseDTO> getAllItems() {

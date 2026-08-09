@@ -11,6 +11,9 @@ import Products from "../pages/Products";
 import ManageProducts from "../pages/ManageProducts";
 import AdminRoute from "../components/AdminRoute";
 import AddProduct from "../pages/AddProduct";
+import EditProduct from "../pages/EditProduct";
+import ProductDetails from "../pages/ProductDetails";
+import Checkout from "../pages/Checkout";
 
 function AppRoutes() {
     return (
@@ -47,6 +50,17 @@ function AppRoutes() {
                         }
                     />
 
+                    <Route path="/admin/products/edit/:id"
+                        element={
+                            <AdminRoute>
+                                <EditProduct />
+                            </AdminRoute>
+                        }
+                    />
+
+                    <Route path="/products/:id" element={<ProductDetails />} />
+
+                    <Route path="/checkout" element={<Checkout />}/>
                 </Route>
             </Routes>
         </BrowserRouter>
