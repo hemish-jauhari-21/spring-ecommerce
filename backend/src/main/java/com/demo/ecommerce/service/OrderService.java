@@ -206,4 +206,64 @@ public class OrderService {
                 })
                 .toList();
     }
+
+    public OrderDetailsResponseDTO getOrderDetails(Long orderId) {
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() ->
+                        new RuntimeException("Order not found"));
+
+
+        User user = order.getUser();
+
+        UserResponseDTO userResponseDTO =
+                new UserResponseDTO(
+                        user.getId(),
+                        user.getName(),
+                        user.getEmail()
+                );
+
+
+        List<OrderItem> orderItems =
+                orderItemRepository.findByOrderId(orderId);
+
+
+        List<OrderItemResponseDTO> itemDTOs =
+                orderItems.stream()
+                        .map(item -> {
+
+                            Product product =
+                                    item.getProduct();
+
+                            ProductResponseDTO productDTO =
+                                    new ProductResponseDTO(
+                                            product.getId(),
+                                            product.getName(),
+                                            product.getPrice(),
+                                            product.getDescription(),
+                                            product.getStock(),
+                                            product.getCategory(),
+                                            product.getImage_url()
+                                    );
+
+                            return new OrderItemResponseDTO(
+                                    item.getId(),
+                                    productDTO,
+                                    item.getQuantity(),
+                                    item.getPrice()
+                            );
+
+                        })
+                        .toList();
+
+
+        return new OrderDetailsResponseDTO(
+                order.getId(),
+                userResponseDTO,
+                order.getTotalAmount(),
+                order.getStatus(),
+                order.getCreatedAt(),
+                itemDTOs
+        );
+    }
 }

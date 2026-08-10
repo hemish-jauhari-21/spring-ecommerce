@@ -73,11 +73,8 @@ function Orders() {
         return (
 
             <div className="container mt-5">
-
                 <div className="alert alert-warning">
-
                     Please login to view your orders.
-
                 </div>
 
                 <button
@@ -88,7 +85,6 @@ function Orders() {
                 >
                     Login
                 </button>
-
             </div>
 
         );
@@ -100,69 +96,42 @@ function Orders() {
     if (loading) {
 
         return (
-
             <div className="container mt-5">
-
                 <h3>
                     Loading orders...
                 </h3>
-
             </div>
-
         );
-
     }
 
 
     // Error
     if (error) {
-
         return (
-
             <div className="container mt-5">
-
                 <div className="alert alert-danger">
-
                     {error}
-
                 </div>
-
             </div>
-
         );
-
     }
 
-
     return (
-
         <div className="container mt-5">
-
             <h2>
                 My Orders
             </h2>
-
             <hr />
 
-
             {orders.length === 0 ? (
-
                 <div className="alert alert-info">
-
                     You haven't placed any orders yet.
-
                 </div>
-
             ) : (
-
                 <div className="table-responsive">
-
                     <table className="table table-bordered table-hover">
-
                         <thead className="table-dark">
-
                             <tr>
-
                                 <th>
                                     Order ID
                                 </th>
@@ -179,17 +148,17 @@ function Orders() {
                                     Status
                                 </th>
 
+                                <th>
+                                    Actions
+                                </th>
                             </tr>
 
                         </thead>
 
 
                         <tbody>
-
                             {orders.map(order => (
-
                                 <tr key={order.id}>
-
                                     <td>
                                         #{order.id}
                                     </td>
@@ -211,6 +180,19 @@ function Orders() {
                                             {order.status}
 
                                         </span>
+
+                                    </td>
+
+                                    <td>
+
+                                        <button
+                                            className="btn btn-primary btn-sm"
+                                            onClick={() =>
+                                                navigate(`/orders/${order.id}`)
+                                            }
+                                        >
+                                            View Details
+                                        </button>
 
                                     </td>
 
