@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
-import CartService from "../services/CartService";
 import CartItemService from "../services/CartItemService";
 import OrderService from "../services/OrderService";
 
@@ -37,11 +36,8 @@ function Checkout() {
 
         try {
 
-            const cart =
-                await CartService.getCartByUserId(user.id);
-
             const items =
-                await CartItemService.getCartItems(cart.id);
+                await CartItemService.getMyCartItems();
 
             setCartItems(items);
 
@@ -93,9 +89,7 @@ function Checkout() {
             setPlacingOrder(true);
 
             const order =
-                await OrderService.placeOrder(
-                    user.id
-                );
+                await OrderService.placeOrder();
 
             alert(
                 `Order placed successfully! Order ID: ${order.id}`

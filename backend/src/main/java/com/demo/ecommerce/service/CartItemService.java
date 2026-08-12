@@ -6,10 +6,15 @@ import com.demo.ecommerce.dto.ProductResponseDTO;
 import com.demo.ecommerce.model.Cart;
 import com.demo.ecommerce.model.CartItem;
 import com.demo.ecommerce.model.Product;
+import com.demo.ecommerce.model.User;
 import com.demo.ecommerce.repository.CartItemRepository;
 import com.demo.ecommerce.repository.CartRepository;
 import com.demo.ecommerce.repository.ProductRepository;
+import com.demo.ecommerce.repository.UserRepository;
+import com.demo.ecommerce.security.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -25,6 +30,12 @@ public class CartItemService {
 
     @Autowired
     private ProductRepository productRepository;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private CartService cartService;
 
     private CartItemResponseDTO convertToDTO(CartItem item) {
         Product product = item.getProduct();
@@ -46,19 +57,37 @@ public class CartItemService {
         );
     }
 
-    public CartItemResponseDTO addItem(CartItemDTO request) {
-        Cart cart = cartRepository.findById(request.getCartId())
-                .orElseThrow(() -> new RuntimeException("Cart not found"));
+    private User getCurrentUser(Authentication authentication) {
+        return SecurityUtils.getCurrentUser(authentication, userRepository);
+    }
+
+    private boolean isOwner(CartItem item, Authentication authentication) {
+        User currentUser = getCurrentUser(authentication);
+
+        return item.getCart() != null
+                && item.getCart().getUser() != null
+                && item.getCart().getUser().getId().equals(currentUser.getId());
+    }
+
+    private void checkOwnership(CartItem item, Authentication authentication) {
+        if (!isOwner(item, authentication)
+                && !SecurityUtils.hasRole(authentication, "ROLE_ADMIN")) {
+            throw new AccessDeniedException("You do not have access to this cart item");
+        }
+    }
+
+    public CartItemResponseDTO addItem(CartItemDTO request, Authentication authentication) {
+        Cart cart = cartService.getOrCreateCart(authentication);
 
         Product product = productRepository.findById(request.getProductId())
                 .orElseThrow(() -> new RuntimeException("Product not found"));
 
         Optional<CartItem> existingItem =
                 cartItemRepository.findByCartIdAndProductId(
-                        request.getCartId(),
+                        cart.getId(),
                         request.getProductId());
 
-        if(existingItem.isPresent()) {
+        if (existingItem.isPresent()) {
             CartItem item = existingItem.get();
 
             item.setQuantity(item.getQuantity() + request.getQuantity());
@@ -85,20 +114,44 @@ public class CartItemService {
                 .toList();
     }
 
-    public String deleteItem(Long id) {
-        if(!cartItemRepository.existsById(id)) {
-            throw new RuntimeException("Cart Item not found");
+    public List<CartItem> getMyItems(Authentication authentication) {
+        Cart cart = cartService.getOrCreateCart(authentication);
+
+        return cartItemRepository.findByCartId(cart.getId());
+    }
+
+    public List<CartItem> getItemsByCartId(Long cartId, Authentication authentication) {
+        Cart cart = cartRepository.findById(cartId)
+                .orElseThrow(() -> new RuntimeException("Cart not found"));
+
+        User currentUser = getCurrentUser(authentication);
+
+        if (!cart.getUser().getId().equals(currentUser.getId())
+                && !SecurityUtils.hasRole(authentication, "ROLE_ADMIN")) {
+            throw new AccessDeniedException("You do not have access to this cart");
         }
+
+        return cartItemRepository.findByCartId(cartId);
+    }
+
+    public String deleteItem(Long id, Authentication authentication) {
+        CartItem item = cartItemRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Cart Item not found"));
+
+        checkOwnership(item, authentication);
 
         cartItemRepository.deleteById(id);
 
         return "Item deleted successfully";
     }
 
-    public CartItemResponseDTO updateQuantity(Long id, Integer quantity) {
+    public CartItemResponseDTO updateQuantity(Long id, Integer quantity,
+                                              Authentication authentication) {
         CartItem item = cartItemRepository.findById(id)
                 .orElseThrow(() ->
                         new RuntimeException("Cart Item not found"));
+
+        checkOwnership(item, authentication);
 
         item.setQuantity(quantity);
 
@@ -107,4 +160,3 @@ public class CartItemService {
         return convertToDTO(savedItem);
     }
 }
-

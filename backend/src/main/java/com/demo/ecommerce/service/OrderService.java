@@ -3,11 +3,13 @@ package com.demo.ecommerce.service;
 import com.demo.ecommerce.dto.*;
 import com.demo.ecommerce.model.*;
 import com.demo.ecommerce.repository.*;
+import com.demo.ecommerce.security.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -31,53 +33,28 @@ public class OrderService {
     @Autowired
     private ProductRepository productRepository;
 
-    public OrderResponseDTO createOrder(OrderDTO request) {
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        Order order = new Order();
-
-        order.setUser(user);
-        order.setStatus("PENDING");
-        order.setTotalAmount(0.0);
-        order.setCreatedAt(LocalDateTime.now());
-
-        Order saveOrder = orderRepository.save(order);
-
-        UserResponseDTO userResponseDTO = new UserResponseDTO(
-                user.getId(),
-                user.getName(),
-                user.getEmail()
-        );
-
-        return new OrderResponseDTO(
-                saveOrder.getId(),
-                userResponseDTO,
-                saveOrder.getTotalAmount(),
-                saveOrder.getStatus(),
-                saveOrder.getCreatedAt()
-        );
+    private User getCurrentUser(Authentication authentication) {
+        return SecurityUtils.getCurrentUser(authentication, userRepository);
     }
 
     @Transactional
-    public OrderResponseDTO placeOrder(PlaceOrderDTO request) {
+    public OrderResponseDTO placeOrder(Authentication authentication) {
+
+        User currentUser = getCurrentUser(authentication);
 
         // 1. Find user's cart
-        Cart cart = cartRepository.findByUserId(request.getUserId())
+        Cart cart = cartRepository.findByUserId(currentUser.getId())
                 .orElseThrow(() ->
                         new RuntimeException("Cart not found"));
-
 
         // 2. Get cart items
         List<CartItem> cartItems =
                 cartItemRepository.findByCartId(cart.getId());
 
-
         // 3. Check if cart is empty
         if (cartItems.isEmpty()) {
             throw new RuntimeException("Cart is empty");
         }
-
 
         // 4. Check stock BEFORE creating the order
         for (CartItem cartItem : cartItems) {
@@ -94,7 +71,6 @@ public class OrderService {
             }
         }
 
-
         // 5. Calculate total amount
         double totalAmount = 0;
 
@@ -104,7 +80,6 @@ public class OrderService {
                     cartItem.getProduct().getPrice()
                             * cartItem.getQuantity();
         }
-
 
         // 6. Create Order
         Order order = new Order();
@@ -117,15 +92,12 @@ public class OrderService {
         Order savedOrder =
                 orderRepository.save(order);
 
-
         // 7. Create OrderItems + reduce stock
         for (CartItem cartItem : cartItems) {
 
             Product product =
                     cartItem.getProduct();
 
-
-            // Create OrderItem
             OrderItem orderItem =
                     new OrderItem();
 
@@ -141,11 +113,8 @@ public class OrderService {
                     product.getPrice()
             );
 
-
             orderItemRepository.save(orderItem);
 
-
-            // Reduce stock
             product.setStock(
                     product.getStock()
                             - cartItem.getQuantity()
@@ -154,10 +123,8 @@ public class OrderService {
             productRepository.save(product);
         }
 
-
         // 8. Clear cart
         cartItemRepository.deleteAll(cartItems);
-
 
         // 9. Prepare user response
         User user = savedOrder.getUser();
@@ -169,7 +136,6 @@ public class OrderService {
                         user.getEmail()
                 );
 
-
         // 10. Return response
         return new OrderResponseDTO(
                 savedOrder.getId(),
@@ -180,39 +146,45 @@ public class OrderService {
         );
     }
 
-    public List<OrderResponseDTO> getOrdersByUser(Long userId) {
-        List<Order> orders = orderRepository.findByUserId(userId);
+    public List<OrderResponseDTO> getOrdersByUser(Authentication authentication) {
+        User currentUser = getCurrentUser(authentication);
+
+        List<Order> orders = orderRepository.findByUserId(currentUser.getId());
 
         return orders.stream()
-                .map(order -> {
-
-                    User user = order.getUser();
-
-                    UserResponseDTO userResponseDTO =
-                            new UserResponseDTO(
-                                    user.getId(),
-                                    user.getName(),
-                                    user.getEmail()
-                            );
-
-                    return new OrderResponseDTO(
-                            order.getId(),
-                            userResponseDTO,
-                            order.getTotalAmount(),
-                            order.getStatus(),
-                            order.getCreatedAt()
-                    );
-
-                })
+                .map(this::toOrderResponse)
                 .toList();
     }
 
-    public OrderDetailsResponseDTO getOrderDetails(Long orderId) {
+    public List<OrderResponseDTO> getOrdersByUserId(Long userId,
+                                                    Authentication authentication) {
+        if (!SecurityUtils.hasRole(authentication, "ROLE_ADMIN")) {
+            throw new AccessDeniedException("ADMIN access required");
+        }
+
+        List<Order> orders = orderRepository.findByUserId(userId);
+
+        return orders.stream()
+                .map(this::toOrderResponse)
+                .toList();
+    }
+
+    public OrderDetailsResponseDTO getOrderDetails(Long orderId,
+                                                   Authentication authentication) {
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() ->
                         new RuntimeException("Order not found"));
 
+        User currentUser = getCurrentUser(authentication);
+
+        boolean isOwner = order.getUser() != null
+                && order.getUser().getId().equals(currentUser.getId());
+
+        if (!isOwner
+                && !SecurityUtils.hasRole(authentication, "ROLE_ADMIN")) {
+            throw new AccessDeniedException("You do not have access to this order");
+        }
 
         User user = order.getUser();
 
@@ -223,10 +195,8 @@ public class OrderService {
                         user.getEmail()
                 );
 
-
         List<OrderItem> orderItems =
                 orderItemRepository.findByOrderId(orderId);
-
 
         List<OrderItemResponseDTO> itemDTOs =
                 orderItems.stream()
@@ -256,7 +226,6 @@ public class OrderService {
                         })
                         .toList();
 
-
         return new OrderDetailsResponseDTO(
                 order.getId(),
                 userResponseDTO,
@@ -264,6 +233,26 @@ public class OrderService {
                 order.getStatus(),
                 order.getCreatedAt(),
                 itemDTOs
+        );
+    }
+
+    private OrderResponseDTO toOrderResponse(Order order) {
+
+        User user = order.getUser();
+
+        UserResponseDTO userResponseDTO =
+                new UserResponseDTO(
+                        user.getId(),
+                        user.getName(),
+                        user.getEmail()
+                );
+
+        return new OrderResponseDTO(
+                order.getId(),
+                userResponseDTO,
+                order.getTotalAmount(),
+                order.getStatus(),
+                order.getCreatedAt()
         );
     }
 }

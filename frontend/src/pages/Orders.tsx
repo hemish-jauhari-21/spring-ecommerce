@@ -32,9 +32,7 @@ function Orders() {
             try {
 
                 const data =
-                    await OrderService.getOrdersByUser(
-                        user.id
-                    );
+                    await OrderService.getMyOrders();
 
                 console.log(
                     "Orders received:",

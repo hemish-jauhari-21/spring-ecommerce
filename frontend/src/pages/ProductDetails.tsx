@@ -4,7 +4,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import ProductService from "../services/ProductService";
 import type { Product } from "../types/Product";
 import { useAuth } from "../context/AuthContext";
-import CartService from "../services/CartService";
 import CartItemService from "../services/CartItemService";
 
 function ProductDetails() {
@@ -43,12 +42,8 @@ function ProductDetails() {
 
             setAddingToCart(true);
 
-            // Get the logged-in user's cart
-            const cart = await CartService.getCartByUserId(user.id);
-
-            // Add product to cart
+            // Product goes into the logged-in user's cart
             await CartItemService.addToCart({
-                cartId: cart.id,
                 productId: product.id,
                 quantity: quantity
             });

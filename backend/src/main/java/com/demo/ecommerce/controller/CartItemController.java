@@ -3,10 +3,10 @@ package com.demo.ecommerce.controller;
 import com.demo.ecommerce.dto.CartItemDTO;
 import com.demo.ecommerce.dto.CartItemResponseDTO;
 import com.demo.ecommerce.model.CartItem;
-import com.demo.ecommerce.repository.CartItemRepository;
 import com.demo.ecommerce.service.CartItemService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,12 +17,15 @@ public class CartItemController {
     @Autowired
     private CartItemService cartItemService;
 
-    @Autowired
-    private CartItemRepository cartItemRepository;
-
     @PostMapping("/add")
-    public CartItemResponseDTO addItem(@Valid @RequestBody CartItemDTO request) {
-        return cartItemService.addItem(request);
+    public CartItemResponseDTO addItem(@Valid @RequestBody CartItemDTO request,
+                                       Authentication authentication) {
+        return cartItemService.addItem(request, authentication);
+    }
+
+    @GetMapping("/me")
+    public List<CartItem> getMyItems(Authentication authentication) {
+        return cartItemService.getMyItems(authentication);
     }
 
     @GetMapping("/all")
@@ -31,19 +34,21 @@ public class CartItemController {
     }
 
     @GetMapping("/cart/{cartId}")
-    public List<CartItem> getItems(
-            @PathVariable Long cartId) {
-
-        return cartItemRepository.findByCartId(cartId);
+    public List<CartItem> getItems(@PathVariable Long cartId,
+                                   Authentication authentication) {
+        return cartItemService.getItemsByCartId(cartId, authentication);
     }
 
     @DeleteMapping("/{id}")
-    public String deleteItem(@PathVariable Long id) {
-        return cartItemService.deleteItem(id);
+    public String deleteItem(@PathVariable Long id,
+                             Authentication authentication) {
+        return cartItemService.deleteItem(id, authentication);
     }
 
     @PutMapping("/update/{id}")
-    public CartItemResponseDTO updateQuantity(@PathVariable Long id, @RequestParam Integer quantity) {
-        return cartItemService.updateQuantity(id, quantity);
+    public CartItemResponseDTO updateQuantity(@PathVariable Long id,
+                                              @RequestParam Integer quantity,
+                                              Authentication authentication) {
+        return cartItemService.updateQuantity(id, quantity, authentication);
     }
 }

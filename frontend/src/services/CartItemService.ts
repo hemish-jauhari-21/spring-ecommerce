@@ -14,30 +14,30 @@ class CartItemService {
         return response.data;
     }
 
-    async getCartItems(cartId: number): Promise<CartItem[]> {
+    async getMyCartItems(): Promise<CartItem[]> {
 
         const response = await api.get<CartItem[]>(
-            `/cart-item/cart/${cartId}`
+            "/cart-item/me"
         );
 
         return response.data;
     }
 
     async updateCartItem(
-        cartId: number,
+        cartItemId: number,
         quantity: number
     ): Promise<CartItem> {
 
         const response = await api.put<CartItem>(
-            `/cart-item/update/${cartId}?quantity=${quantity}`
+            `/cart-item/update/${cartItemId}?quantity=${quantity}`
         );
 
         return response.data;
     }
 
-    async deleteCartItem(cartId: number): Promise<void> {
+    async deleteCartItem(cartItemId: number): Promise<void> {
 
-        await api.delete(`/cart-item/${cartId}`);
+        await api.delete(`/cart-item/${cartItemId}`);
 
     }
 

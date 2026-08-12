@@ -67,6 +67,21 @@ public class SecurityConfig {
                                 "/api/v1/ecommerce/user/**"
                         ).hasRole("ADMIN")
 
+                        // Global cart-item listing is ADMIN only
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/ecommerce/cart-item/all"
+                        ).hasRole("ADMIN")
+
+                        // Cross-user cart/order lookups are ADMIN only
+                        .requestMatchers(
+                                "/api/v1/ecommerce/cart/user/**"
+                        ).hasRole("ADMIN")
+
+                        .requestMatchers(
+                                "/api/v1/ecommerce/order/user/**"
+                        ).hasRole("ADMIN")
+
                         // Everything else requires login
                         .anyRequest().authenticated()
                 )

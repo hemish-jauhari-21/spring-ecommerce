@@ -30,12 +30,12 @@ function Cart() {
         try {
 
             const cart =
-                await CartService.getCartByUserId(user.id);
+                await CartService.getMyCart();
 
             setCartId(cart.id);
 
             const items =
-                await CartItemService.getCartItems(cart.id);
+                await CartItemService.getMyCartItems();
 
             setCartItems(items);
 

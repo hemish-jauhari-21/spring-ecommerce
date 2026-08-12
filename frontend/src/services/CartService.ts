@@ -12,10 +12,10 @@ export interface Cart {
 
 class CartService {
 
-    async getCartByUserId(userId: number): Promise<Cart> {
+    async getMyCart(): Promise<Cart> {
 
         const response = await api.get<Cart>(
-            `/cart/user/${userId}`
+            "/cart/me"
         );
 
         return response.data;
