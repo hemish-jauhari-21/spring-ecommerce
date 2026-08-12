@@ -39,6 +39,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         // Public APIs
+                        .requestMatchers("/error").permitAll()
+
                         .requestMatchers("/api/v1/ecommerce/auth/**").permitAll()
 
                         .requestMatchers(HttpMethod.GET,
@@ -58,6 +60,11 @@ public class SecurityConfig {
                         .requestMatchers(
                                 HttpMethod.DELETE,
                                 "/api/v1/ecommerce/products/**"
+                        ).hasRole("ADMIN")
+
+                        // User management is ADMIN only
+                        .requestMatchers(
+                                "/api/v1/ecommerce/user/**"
                         ).hasRole("ADMIN")
 
                         // Everything else requires login

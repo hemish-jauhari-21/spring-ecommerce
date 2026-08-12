@@ -1,11 +1,14 @@
 package com.demo.ecommerce.service;
 
 import com.demo.ecommerce.dto.UserDTO;
+import com.demo.ecommerce.model.Role;
 import com.demo.ecommerce.model.User;
 import com.demo.ecommerce.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Optional;
@@ -19,12 +22,17 @@ public class UserService {
     private PasswordEncoder passwordEncoder;
 
     public User saveUser(UserDTO request) {
+        if (repository.findByEmail(request.getEmail()).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Email is already registered");
+        }
+
         User newUser = new User();
 
         newUser.setName(request.getName());
         newUser.setEmail(request.getEmail());
         newUser.setPassword(passwordEncoder.encode(request.getPassword()));
-        newUser.setRole(request.getRole());
+        newUser.setRole(Role.USER);
 
         return repository.save(newUser);
     }
@@ -53,10 +61,15 @@ public class UserService {
         User user = repository.findById(id)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
+        Optional<User> userWithEmail = repository.findByEmail(request.getEmail());
+        if (userWithEmail.isPresent() && !userWithEmail.get().getId().equals(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Email is already registered");
+        }
+
         user.setName(request.getName());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(request.getRole());
 
         return repository.save(user);
     }

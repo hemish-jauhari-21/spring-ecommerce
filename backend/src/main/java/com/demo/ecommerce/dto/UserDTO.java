@@ -1,10 +1,6 @@
 package com.demo.ecommerce.dto;
 
-import com.demo.ecommerce.model.Role;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Table;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.validation.constraints.*;
 import lombok.*;
 
@@ -13,6 +9,7 @@ import lombok.*;
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class UserDTO {
     private Long id;
 
@@ -30,7 +27,4 @@ public class UserDTO {
             message = "Password must contain at least one digit, lowercase, uppercase, and special character"
     )
     private String password;
-
-//    @NotBlank(message = "Role is required either Admin or User")
-    private Role role;
 }
