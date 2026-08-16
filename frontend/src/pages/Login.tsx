@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
 import AuthService from "../services/AuthService";
@@ -43,6 +43,10 @@ function Login() {
 
                     <button type="submit" className="btn btn-primary">Login</button>
                 </form>
+
+                <div className="mt-3">
+                    <Link to="/register">Don't have an account? Register</Link>
+                </div>
             </div>
         </>
     );

@@ -12,6 +12,7 @@ import lombok.ToString;
 @AllArgsConstructor
 @ToString
 public class CartItemDTO {
+
     @NotNull
     private Long productId;
 

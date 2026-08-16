@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import ProductService from "../services/ProductService";
 import ProductCard from "../components/ProductCard";
+import type { Product } from "../types/Product";
 
 
 function Home() {
-    const [products, setProducts] = useState([]);
+    const [products, setProducts] = useState<Product[]>([]);
 
     useEffect(() => {
         const fetchProducts = async () => {
