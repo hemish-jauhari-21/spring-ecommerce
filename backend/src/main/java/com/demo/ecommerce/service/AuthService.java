@@ -2,6 +2,7 @@ package com.demo.ecommerce.service;
 
 import com.demo.ecommerce.dto.LoginRequestDTO;
 import com.demo.ecommerce.dto.LoginResponseDTO;
+import com.demo.ecommerce.exception.ResourceNotFoundException;
 import com.demo.ecommerce.model.User;
 import com.demo.ecommerce.repository.UserRepository;
 import com.demo.ecommerce.security.JwtService;
@@ -29,7 +30,7 @@ public class AuthService {
         );
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         String token = jwtService.generateToken(user.getEmail());
 

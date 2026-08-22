@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
 import ProductService from "../services/ProductService";
+import { notifyError } from "../services/api";
 import type { Product } from "../types/Product";
 import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 function ManageProducts() {
 
@@ -16,13 +18,11 @@ function ManageProducts() {
 
             const data = await ProductService.getAllProducts();
 
-            console.log("Products received:", data);
-
             setProducts(data);
 
         } catch (error) {
 
-            console.error("Error fetching products:", error);
+            notifyError(error, "Unable to load products.");
 
         }
 
@@ -37,13 +37,11 @@ function ManageProducts() {
 
                 const data = await ProductService.getAllProducts();
 
-                console.log("Products received:", data);
-
                 setProducts(data);
 
             } catch (error) {
 
-                console.error("Error fetching products:", error);
+                notifyError(error, "Unable to load products.");
 
             }
 
@@ -67,16 +65,14 @@ function ManageProducts() {
 
             await ProductService.deleteProduct(id);
 
-            alert("Product deleted successfully.");
+            toast.success("Product deleted successfully.");
 
             // Refresh the product list
             loadProducts();
 
         } catch (error) {
 
-            console.error("Failed to delete product:", error);
-
-            alert("Failed to delete product.");
+            notifyError(error, "Failed to delete product.");
 
         }
 

@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import ProductService from "../services/ProductService";
+import { notifyError } from "../services/api";
 import type { ProductRequest } from "../types/ProductRequest";
+import { toast } from "react-toastify";
 
 function AddProduct() {
 
@@ -39,7 +41,7 @@ function AddProduct() {
 
             await ProductService.addProduct(product);
 
-            alert("Product Added Successfully.");
+            toast.success("Product Added Successfully.");
 
             navigate("/admin/products");
 
@@ -47,9 +49,7 @@ function AddProduct() {
 
         catch (error) {
 
-            console.error(error);
-
-            alert("Failed to add product.");
+            notifyError(error, "Failed to add product.");
 
         }
 

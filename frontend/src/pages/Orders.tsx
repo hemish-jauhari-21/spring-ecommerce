@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import OrderService from "../services/OrderService";
+import { getErrorMessage } from "../services/api";
 import type { OrderResponse } from "../services/OrderService";
 
 function Orders() {
@@ -34,22 +35,15 @@ function Orders() {
                 const data =
                     await OrderService.getMyOrders();
 
-                console.log(
-                    "Orders received:",
-                    data
-                );
-
                 setOrders(data);
 
             } catch (error) {
 
-                console.error(
-                    "Error loading orders:",
-                    error
-                );
-
                 setError(
-                    "Unable to load orders."
+                    getErrorMessage(
+                        error,
+                        "Unable to load orders."
+                    )
                 );
 
             } finally {

@@ -3,6 +3,8 @@ package com.demo.ecommerce.service;
 import com.demo.ecommerce.dto.CartItemDTO;
 import com.demo.ecommerce.dto.CartItemResponseDTO;
 import com.demo.ecommerce.dto.ProductResponseDTO;
+import com.demo.ecommerce.exception.BusinessException;
+import com.demo.ecommerce.exception.ResourceNotFoundException;
 import com.demo.ecommerce.model.Cart;
 import com.demo.ecommerce.model.CartItem;
 import com.demo.ecommerce.model.Product;
@@ -17,6 +19,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -129,9 +132,44 @@ public class CartItemService {
 
 
     // --------------------------------------------------
+    // Stock validation used by ADD and UPDATE.
+    // Backend is authoritative - the frontend check
+    // is UX only and can always be bypassed.
+    // --------------------------------------------------
+
+    private void validateStockAgainstProduct(
+            Product product,
+            int requestedQuantity) {
+
+        int availableStock =
+                product.getStock() != null
+                        ? product.getStock()
+                        : 0;
+
+        if (requestedQuantity > availableStock) {
+
+            if (availableStock <= 0) {
+                throw new BusinessException(
+                        product.getName() + " is out of stock"
+                );
+            }
+
+            throw new BusinessException(
+                    "Only "
+                            + availableStock
+                            + " units of "
+                            + product.getName()
+                            + " are available."
+            );
+        }
+    }
+
+
+    // --------------------------------------------------
     // Add product to current user's cart
     // --------------------------------------------------
 
+    @Transactional
     public CartItemResponseDTO addItem(
             CartItemDTO request,
             Authentication authentication) {
@@ -147,10 +185,21 @@ public class CartItemService {
         Product product = productRepository
                 .findById(request.getProductId())
                 .orElseThrow(() ->
-                        new RuntimeException(
-                                "Product not found"
+                        new ResourceNotFoundException(
+                                "Product not found with id: " + request.getProductId()
                         )
                 );
+
+
+        // Service-level quantity validation
+        // (in addition to the @Min(1) bean validation)
+        if (request.getQuantity() == null
+                || request.getQuantity() < 1) {
+
+            throw new BusinessException(
+                    "Quantity must be at least 1"
+            );
+        }
 
 
         // Check if product already exists in cart
@@ -171,30 +220,31 @@ public class CartItemService {
                     item.getQuantity()
                             + request.getQuantity();
 
-            // Stock validation
-            if (newQuantity > product.getStock()) {
-
-                throw new RuntimeException(
-                        "Requested quantity exceeds available stock"
-                );
-            }
+            // Stock validation:
+            // resulting quantity must fit in stock
+            validateStockAgainstProduct(
+                    product,
+                    newQuantity
+            );
 
             item.setQuantity(newQuantity);
 
             CartItem savedItem =
                     cartItemRepository.save(item);
 
+
+            // Server recalculates the authoritative total
+            cartService.recalculateTotal(cart);
+
             return convertToDTO(savedItem);
         }
 
 
         // New cart item
-        if (request.getQuantity() > product.getStock()) {
-
-            throw new RuntimeException(
-                    "Requested quantity exceeds available stock"
-            );
-        }
+        validateStockAgainstProduct(
+                product,
+                request.getQuantity()
+        );
 
 
         CartItem item = new CartItem();
@@ -206,6 +256,10 @@ public class CartItemService {
 
         CartItem savedItem =
                 cartItemRepository.save(item);
+
+
+        // Server recalculates the authoritative total
+        cartService.recalculateTotal(cart);
 
         return convertToDTO(savedItem);
     }
@@ -258,8 +312,8 @@ public class CartItemService {
         Cart cart = cartRepository
                 .findById(cartId)
                 .orElseThrow(() ->
-                        new RuntimeException(
-                                "Cart not found"
+                        new ResourceNotFoundException(
+                                "Cart not found with id: " + cartId
                         )
                 );
 
@@ -302,6 +356,7 @@ public class CartItemService {
     // ADMIN -> any item
     // --------------------------------------------------
 
+    @Transactional
     public String deleteItem(
             Long id,
             Authentication authentication) {
@@ -310,8 +365,8 @@ public class CartItemService {
                 cartItemRepository
                         .findById(id)
                         .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Cart Item not found"
+                                new ResourceNotFoundException(
+                                        "Cart item not found with id: " + id
                                 )
                         );
 
@@ -323,7 +378,17 @@ public class CartItemService {
         );
 
 
+        Cart cart = item.getCart();
+
+
         cartItemRepository.deleteById(id);
+
+
+        // Server recalculates the authoritative total
+        // so no stale totals remain after deletion
+        if (cart != null) {
+            cartService.recalculateTotal(cart);
+        }
 
         return "Item deleted successfully";
     }
@@ -335,6 +400,7 @@ public class CartItemService {
     // ADMIN -> any item
     // --------------------------------------------------
 
+    @Transactional
     public CartItemResponseDTO updateQuantity(
             Long id,
             Integer quantity,
@@ -343,7 +409,7 @@ public class CartItemService {
         // Quantity validation
         if (quantity == null || quantity < 1) {
 
-            throw new IllegalArgumentException(
+            throw new BusinessException(
                     "Quantity must be at least 1"
             );
         }
@@ -353,8 +419,8 @@ public class CartItemService {
                 cartItemRepository
                         .findById(id)
                         .orElseThrow(() ->
-                                new RuntimeException(
-                                        "Cart Item not found"
+                                new ResourceNotFoundException(
+                                        "Cart item not found with id: " + id
                                 )
                         );
 
@@ -371,13 +437,12 @@ public class CartItemService {
                 item.getProduct();
 
 
-        // Stock validation
-        if (quantity > product.getStock()) {
-
-            throw new RuntimeException(
-                    "Requested quantity exceeds available stock"
-            );
-        }
+        // Stock validation:
+        // requested quantity must fit within current stock
+        validateStockAgainstProduct(
+                product,
+                quantity
+        );
 
 
         item.setQuantity(quantity);
@@ -386,6 +451,11 @@ public class CartItemService {
         CartItem savedItem =
                 cartItemRepository.save(item);
 
+
+        // Server recalculates the authoritative total
+        if (item.getCart() != null) {
+            cartService.recalculateTotal(item.getCart());
+        }
 
         return convertToDTO(savedItem);
     }

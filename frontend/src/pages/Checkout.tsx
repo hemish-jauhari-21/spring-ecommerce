@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
+import CartService from "../services/CartService";
 import CartItemService from "../services/CartItemService";
 import OrderService from "../services/OrderService";
+import { getErrorMessage, notifyError } from "../services/api";
+import { toast } from "react-toastify";
 
 import type { CartItem } from "../types/CartItem";
 
@@ -15,6 +18,11 @@ function Checkout() {
 
     const [cartItems, setCartItems] =
         useState<CartItem[]>([]);
+
+    // Authoritative total loaded from the
+    // backend CartResponseDTO.
+    const [serverTotal, setServerTotal] =
+        useState<number | null>(null);
 
     const [loading, setLoading] =
         useState(true);
@@ -28,44 +36,50 @@ function Checkout() {
 
     useEffect(() => {
 
-    if (!user) {
-        return;
-    }
-
-    const loadCart = async () => {
-
-        try {
-
-            const items =
-                await CartItemService.getMyCartItems();
-
-            setCartItems(items);
-
-        } catch (error) {
-
-            console.error(
-                "Error loading checkout:",
-                error
-            );
-
-            setError(
-                "Unable to load your cart."
-            );
-
-        } finally {
-
-            setLoading(false);
-
+        if (!user) {
+            return;
         }
 
-    };
+        const loadCheckout = async () => {
 
-    loadCart();
+            try {
 
-}, [user]);
+                const cart =
+                    await CartService.getMyCart();
+
+                setServerTotal(cart.totalAmount);
+
+                const items =
+                    await CartItemService.getMyCartItems();
+
+                setCartItems(items);
+
+            } catch (error) {
+
+                setError(
+                    getErrorMessage(
+                        error,
+                        "Unable to load your cart."
+                    )
+                );
+
+            } finally {
+
+                setLoading(false);
+
+            }
+
+        };
+
+        loadCheckout();
+
+    }, [user]);
 
 
-    const totalAmount =
+    // Client-side subtotal is display-only.
+    // The order total is always calculated by the backend.
+    const displayTotal =
+        serverTotal ??
         cartItems.reduce(
             (total, item) =>
                 total +
@@ -91,7 +105,7 @@ function Checkout() {
             const order =
                 await OrderService.placeOrder();
 
-            alert(
+            toast.success(
                 `Order placed successfully! Order ID: ${order.id}`
             );
 
@@ -99,12 +113,8 @@ function Checkout() {
 
         } catch (error) {
 
-            console.error(
-                "Failed to place order:",
-                error
-            );
-
-            alert(
+            notifyError(
+                error,
                 "Failed to place order. Please check stock and try again."
             );
 
@@ -156,6 +166,7 @@ function Checkout() {
             </div>
 
         );
+
     }
 
 
@@ -174,6 +185,7 @@ function Checkout() {
             </div>
 
         );
+
     }
 
 
@@ -201,6 +213,7 @@ function Checkout() {
             </div>
 
         );
+
     }
 
 
@@ -239,7 +252,7 @@ function Checkout() {
                         </th>
 
                         <th>
-                            Total
+                            Subtotal
                         </th>
 
                     </tr>
@@ -283,8 +296,10 @@ function Checkout() {
 
             <div className="text-end">
 
+                {/* Server-provided authoritative total */}
+
                 <h3>
-                    Total: ₹ {totalAmount}
+                    Total: ₹ {displayTotal}
                 </h3>
 
 
@@ -303,7 +318,6 @@ function Checkout() {
             </div>
 
         </div>
-
     );
 }
 

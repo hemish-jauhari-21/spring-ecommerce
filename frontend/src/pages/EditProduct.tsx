@@ -2,7 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import ProductService from "../services/ProductService";
+import { notifyError } from "../services/api";
 import type { ProductRequest } from "../types/ProductRequest";
+import { toast } from "react-toastify";
 
 function EditProduct() {
     const { id } = useParams<{ id: string }>();
@@ -23,7 +25,7 @@ function EditProduct() {
                     setProduct(data);
                 })
                 .catch((error) => {
-                    console.error("Error fetching product:", error);
+                    notifyError(error, "Unable to load product.");
                 });
         }
     }, [id]);
@@ -41,10 +43,11 @@ function EditProduct() {
         if (id) {
             ProductService.updateProduct(parseInt(id), product)
                 .then(() => {
+                    toast.success("Product updated successfully.");
                     navigate("/products");
                 })
                 .catch((error) => {
-                    console.error("Error updating product:", error);
+                    notifyError(error, "Failed to update product.");
                 });
         }
     };

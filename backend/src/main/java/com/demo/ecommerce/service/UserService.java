@@ -1,14 +1,14 @@
 package com.demo.ecommerce.service;
 
 import com.demo.ecommerce.dto.UserDTO;
+import com.demo.ecommerce.exception.DuplicateResourceException;
+import com.demo.ecommerce.exception.ResourceNotFoundException;
 import com.demo.ecommerce.model.Role;
 import com.demo.ecommerce.model.User;
 import com.demo.ecommerce.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Optional;
@@ -23,8 +23,7 @@ public class UserService {
 
     public User saveUser(UserDTO request) {
         if (repository.findByEmail(request.getEmail()).isPresent()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Email is already registered");
+            throw new DuplicateResourceException("Email is already registered");
         }
 
         User newUser = new User();
@@ -43,14 +42,14 @@ public class UserService {
 
     public User getUserById(Long id) {
         return repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
     }
 
     public String deleteById(Long id) {
         Optional<User> user = repository.findById(id);
 
         if (user.isEmpty()) {
-            return "User not present..";
+            throw new ResourceNotFoundException("User not found with id: " + id);
         }
 
         repository.deleteById(id);
@@ -59,12 +58,11 @@ public class UserService {
 
     public User updateUser(Long id, UserDTO request) {
         User user = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
 
         Optional<User> userWithEmail = repository.findByEmail(request.getEmail());
         if (userWithEmail.isPresent() && !userWithEmail.get().getId().equals(id)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Email is already registered");
+            throw new DuplicateResourceException("Email is already registered");
         }
 
         user.setName(request.getName());

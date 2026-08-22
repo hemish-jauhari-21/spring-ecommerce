@@ -2,6 +2,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useState } from "react";
 import AuthService from "../services/AuthService";
+import { notifyError } from "../services/api";
+import { toast } from "react-toastify";
 
 
 function Login() {
@@ -16,12 +18,11 @@ function Login() {
         try {
             const response = await AuthService.login({email, password});
             login(response);
-            alert("Login successful");
+            toast.success("Login successful");
             navigate("/");
         }
         catch (error) {
-            console.error("Login failed:", error);
-            alert("Login failed. Please check your credentials and try again.");
+            notifyError(error, "Login failed. Please check your credentials and try again.");
         }
     }
 

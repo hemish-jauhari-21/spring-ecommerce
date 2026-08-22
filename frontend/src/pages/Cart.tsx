@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuth } from "../context/AuthContext";
 import CartService from "../services/CartService";
+import type { Cart as CartSummary } from "../services/CartService";
 import CartItemService from "../services/CartItemService";
+import { getErrorMessage, notifyError } from "../services/api";
 
 import type { CartItem } from "../types/CartItem";
 
@@ -13,55 +15,127 @@ function Cart() {
     const navigate = useNavigate();
 
     const [cartItems, setCartItems] = useState<CartItem[]>([]);
+    const [cart, setCart] = useState<CartSummary | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [busyItemId, setBusyItemId] = useState<number | null>(null);
 
-    const [cartId, setCartId] = useState<number | null>(null);
+    // Reload items + authoritative server total.
+    // The displayed total always comes from the
+    // backend CartResponseDTO, never from a
+    // client-side calculation.
+    const refreshCart = useCallback(async () => {
+        const updatedItems =
+            await CartItemService.getMyCartItems();
 
+        setCartItems(updatedItems);
+
+        if (updatedItems.length > 0) {
+            const updatedCart =
+                await CartService.getMyCart();
+
+            setCart(updatedCart);
+        }
+    }, []);
 
     useEffect(() => {
 
-    if (!user) {
-        return;
-    }
+        if (!user) {
+            return;
+        }
 
-    const loadCart = async () => {
+        const loadCart = async () => {
+
+            try {
+
+                const myCart =
+                    await CartService.getMyCart();
+
+                setCart(myCart);
+
+                const items =
+                    await CartItemService.getMyCartItems();
+
+                setCartItems(items);
+
+            } catch (error) {
+
+                setError(
+                    getErrorMessage(
+                        error,
+                        "Unable to load your cart."
+                    )
+                );
+
+            } finally {
+
+                setLoading(false);
+
+            }
+
+        };
+
+        loadCart();
+
+    }, [user]);
+
+    // Update quantity through the backend.
+    // The server validates ownership and stock
+    // and recalculates the cart total.
+    const handleUpdateQuantity = async (
+        item: CartItem,
+        newQuantity: number
+    ) => {
 
         try {
 
-            const cart =
-                await CartService.getMyCart();
+            setBusyItemId(item.id);
 
-            setCartId(cart.id);
+            await CartItemService.updateCartItem(
+                item.id,
+                newQuantity
+            );
 
-            const items =
-                await CartItemService.getMyCartItems();
-
-            setCartItems(items);
+            await refreshCart();
 
         } catch (error) {
 
-            console.error(
-                "Error loading cart:",
-                error
-            );
-
-            setError(
-                "Unable to load your cart."
-            );
+            notifyError(error, "Unable to update cart.");
 
         } finally {
 
-            setLoading(false);
+            setBusyItemId(null);
 
         }
 
     };
 
-    loadCart();
+    // Delete through the backend, then reload so the
+    // server total stays correct (no stale totals).
+    const handleRemoveItem = async (item: CartItem) => {
 
-}, [user]);
+        try {
 
+            setBusyItemId(item.id);
+
+            await CartItemService.deleteCartItem(item.id);
+
+            await refreshCart();
+
+        } catch (error) {
+
+            notifyError(
+                error,
+                "Unable to remove item."
+            );
+
+        } finally {
+
+            setBusyItemId(null);
+
+        }
+
+    };
 
     // User is not logged in
     if (!user) {
@@ -138,9 +212,11 @@ function Cart() {
                     My Cart
                 </h2>
 
-                <span>
-                    Cart ID: {cartId}
-                </span>
+                {cart && (
+                    <span className="text-muted">
+                        Cart ID: {cart.id}
+                    </span>
+                )}
 
             </div>
 
@@ -159,7 +235,7 @@ function Cart() {
 
                 <>
 
-                    <table className="table table-bordered">
+                    <table className="table table-bordered align-middle">
 
                         <thead>
 
@@ -174,11 +250,15 @@ function Cart() {
                                 </th>
 
                                 <th>
+                                    Availability
+                                </th>
+
+                                <th>
                                     Quantity
                                 </th>
 
                                 <th>
-                                    Total
+                                    Subtotal
                                 </th>
 
                                 <th>
@@ -192,104 +272,151 @@ function Cart() {
 
                         <tbody>
 
-                            {cartItems.map(item => (
+                            {cartItems.map(item => {
 
-                                <tr key={item.id}>
+                                const maxQuantity =
+                                    item.product.stock;
 
-                                    <td>
+                                return (
 
-                                        {item.product.name}
+                                    <tr key={item.id}>
 
-                                    </td>
+                                        <td>
 
-                                    <td>
+                                            {item.product.name}
 
-                                        ₹ {item.product.price}
+                                        </td>
 
-                                    </td>
+                                        <td>
 
-                                    <td>
+                                            ₹ {item.product.price}
 
-                                        {item.quantity}
+                                        </td>
 
-                                    </td>
+                                        <td>
 
-                                    <td>
+                                            {item.product.stock > 0 ? (
 
-                                        ₹ {
-                                            item.product.price *
-                                            item.quantity
-                                        }
+                                                <span className="text-success">
+                                                    Available: {item.product.stock}
+                                                </span>
 
-                                    </td>
+                                            ) : (
 
-                                    <td>
+                                                <span className="text-danger">
+                                                    Out of Stock
+                                                </span>
 
-                                        <button
-                                            className="btn btn-danger btn-sm"
-                                            onClick={async () => {
+                                            )}
 
-                                                try {
+                                        </td>
 
-                                                    await CartItemService.deleteCartItem(
-                                                        item.id
-                                                    );
+                                        <td>
 
-                                                    setCartItems(
-                                                        prev =>
-                                                            prev.filter(
-                                                                cartItem =>
-                                                                    cartItem.id !==
-                                                                    item.id
-                                                            )
-                                                    );
+                                            <div className="d-flex align-items-center">
 
-                                                } catch (error) {
+                                                {/* Decrease - never below 1 */}
 
-                                                    console.error(
-                                                        "Error deleting cart item:",
-                                                        error
-                                                    );
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-outline-secondary btn-sm"
+                                                    aria-label={`Decrease quantity of ${item.product.name}`}
+                                                    onClick={() =>
+                                                        handleUpdateQuantity(
+                                                            item,
+                                                            item.quantity - 1
+                                                        )
+                                                    }
+                                                    disabled={
+                                                        busyItemId === item.id ||
+                                                        item.quantity <= 1
+                                                    }
+                                                >
+                                                    -
+                                                </button>
 
-                                                    alert(
-                                                        "Unable to remove item."
-                                                    );
 
-                                                }
+                                                {/* Quantity */}
 
-                                            }}
-                                        >
-                                            Remove
-                                        </button>
+                                                <span className="mx-3 fw-bold">
 
-                                    </td>
+                                                    {item.quantity}
 
-                                </tr>
+                                                </span>
 
-                            ))}
+
+                                                {/* Increase - never above available stock */}
+
+                                                <button
+                                                    type="button"
+                                                    className="btn btn-outline-secondary btn-sm"
+                                                    aria-label={`Increase quantity of ${item.product.name}`}
+                                                    onClick={() =>
+                                                        handleUpdateQuantity(
+                                                            item,
+                                                            item.quantity + 1
+                                                        )
+                                                    }
+                                                    disabled={
+                                                        busyItemId === item.id ||
+                                                        maxQuantity === null ||
+                                                        item.quantity >= maxQuantity
+                                                    }
+                                                >
+                                                    +
+                                                </button>
+
+                                            </div>
+
+                                        </td>
+
+                                        <td>
+
+                                            ₹ {
+                                                item.product.price *
+                                                item.quantity
+                                            }
+
+                                        </td>
+
+                                        <td>
+
+                                            <button
+                                                className="btn btn-danger btn-sm"
+                                                onClick={() => handleRemoveItem(item)}
+                                                disabled={busyItemId === item.id}
+                                            >
+
+                                                Remove
+
+                                            </button>
+
+                                        </td>
+
+                                    </tr>
+
+                                );
+
+                            })}
 
                         </tbody>
 
                     </table>
 
 
-                    {/* Cart total */}
+                    {/* Authoritative total from the backend */}
 
                     <div className="text-end">
 
                         <h4>
 
-                            Total: ₹ {
-                                cartItems.reduce(
-                                    (total, item) =>
-                                        total +
-                                        item.product.price *
-                                        item.quantity,
-                                    0
-                                )
-                            }
+                            Total: ₹ {cart?.totalAmount ?? 0}
 
                         </h4>
+
+                        <p className="text-muted small">
+                            Total calculated by the server.
+                        </p>
 
                         <button
                             className="btn btn-success mt-2"

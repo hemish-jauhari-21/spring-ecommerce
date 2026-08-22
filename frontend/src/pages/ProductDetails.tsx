@@ -2,9 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 import ProductService from "../services/ProductService";
+import { getErrorMessage, notifyError } from "../services/api";
 import type { Product } from "../types/Product";
 import { useAuth } from "../context/AuthContext";
 import CartItemService from "../services/CartItemService";
+import { toast } from "react-toastify";
 
 function ProductDetails() {
 
@@ -29,7 +31,7 @@ function ProductDetails() {
     const handleAddToCart = async () => {
 
         if (!user) {
-            alert("Please login first.");
+            toast.warning("Please login first.");
             navigate("/login");
             return;
         }
@@ -48,16 +50,11 @@ function ProductDetails() {
                 quantity: quantity
             });
 
-            alert("Product added to cart successfully.");
+            toast.success("Product added to cart successfully.");
 
         } catch (error) {
 
-            console.error(
-                "Failed to add product to cart:",
-                error
-            );
-
-            alert("Failed to add product to cart.");
+            notifyError(error, "Failed to add product to cart.");
 
         } finally {
 
@@ -80,22 +77,18 @@ function ProductDetails() {
                         Number(id)
                     );
 
-                console.log(
-                    "Product received:",
-                    data
-                );
-
                 setProduct(data);
+
+                // Quantity always starts at 1
+                setQuantity(1);
 
             } catch (error) {
 
-                console.error(
-                    "Error fetching product:",
-                    error
-                );
-
                 setError(
-                    "Unable to load product."
+                    getErrorMessage(
+                        error,
+                        "Unable to load product."
+                    )
                 );
 
             } finally {
@@ -222,15 +215,31 @@ function ProductDetails() {
                     </p>
 
 
-                    {/* Stock */}
+                    {/* Stock availability */}
 
                     <p>
 
-                        <strong>
-                            Stock:
-                        </strong>{" "}
+                        {product.stock > 0 ? (
 
-                        {product.stock}
+                            <span className="text-success">
+
+                                <strong>
+                                    Availability:
+                                </strong>{" "}
+
+                                Available: {product.stock}
+
+                            </span>
+
+                        ) : (
+
+                            <span className="text-danger">
+
+                                <strong>Out of Stock</strong>
+
+                            </span>
+
+                        )}
 
                     </p>
 

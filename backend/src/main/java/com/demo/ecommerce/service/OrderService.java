@@ -1,6 +1,8 @@
 package com.demo.ecommerce.service;
 
 import com.demo.ecommerce.dto.*;
+import com.demo.ecommerce.exception.BusinessException;
+import com.demo.ecommerce.exception.ResourceNotFoundException;
 import com.demo.ecommerce.model.*;
 import com.demo.ecommerce.repository.*;
 import com.demo.ecommerce.security.SecurityUtils;
@@ -12,6 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class OrderService {
@@ -33,9 +38,34 @@ public class OrderService {
     @Autowired
     private ProductRepository productRepository;
 
+    @Autowired
+    private CartService cartService;
+
     private User getCurrentUser(Authentication authentication) {
         return SecurityUtils.getCurrentUser(authentication, userRepository);
     }
+
+    // --------------------------------------------------
+    // Place an order from the current user's cart.
+    //
+    // All-or-nothing: stock validation, order creation,
+    // stock reduction and cart clearing run inside a
+    // single transaction - any failure rolls everything
+    // back (no partial orders, no partial stock loss,
+    // cart stays intact).
+    //
+    // Concurrency: product rows are locked with a native
+    // SELECT ... FOR UPDATE scalar projection. A scalar
+    // projection is required because entities already in
+    // the persistence context would hide concurrent
+    // commits; the scalar rows are always fresh. The
+    // final decrement is additionally guarded by
+    // "stock >= quantity" so overselling is impossible.
+    //
+    // The total is always calculated server-side from
+    // the database product price * quantity. Client
+    // totals are never trusted.
+    // --------------------------------------------------
 
     @Transactional
     public OrderResponseDTO placeOrder(Authentication authentication) {
@@ -45,7 +75,7 @@ public class OrderService {
         // 1. Find user's cart
         Cart cart = cartRepository.findByUserId(currentUser.getId())
                 .orElseThrow(() ->
-                        new RuntimeException("Cart not found"));
+                        new ResourceNotFoundException("Cart not found"));
 
         // 2. Get cart items
         List<CartItem> cartItems =
@@ -53,35 +83,64 @@ public class OrderService {
 
         // 3. Check if cart is empty
         if (cartItems.isEmpty()) {
-            throw new RuntimeException("Cart is empty");
+            throw new BusinessException("Cart is empty");
         }
 
-        // 4. Check stock BEFORE creating the order
+        // 4. Lock all referenced products and read their
+        // CURRENT stock/price. Sorted ids keep the lock
+        // order deterministic across transactions.
+        List<Long> sortedProductIds = cartItems.stream()
+                .map(item -> item.getProduct().getId())
+                .distinct()
+                .sorted()
+                .toList();
+
+        Map<Long, ProductRepository.ProductStockRow> lockedRows =
+                productRepository.findStockForUpdate(sortedProductIds)
+                        .stream()
+                        .collect(Collectors.toMap(
+                                ProductRepository.ProductStockRow::getId,
+                                Function.identity()));
+
+        // 5. Validate stock against the locked (fresh) data
         for (CartItem cartItem : cartItems) {
 
-            Product product = cartItem.getProduct();
+            ProductRepository.ProductStockRow row =
+                    lockedRows.get(cartItem.getProduct().getId());
 
-            if (product.getStock() < cartItem.getQuantity()) {
+            int availableStock =
+                    row.getStock() != null ? row.getStock() : 0;
 
-                throw new RuntimeException(
-                        product.getName()
-                                + " has insufficient stock. Available: "
-                                + product.getStock()
-                );
+            if (cartItem.getQuantity() > availableStock) {
+
+                if (availableStock <= 0) {
+                    throw new BusinessException(
+                            row.getName() + " is out of stock");
+                }
+
+                throw new BusinessException(
+                        "Only "
+                                + availableStock
+                                + " units of "
+                                + row.getName()
+                                + " are available.");
             }
         }
 
-        // 5. Calculate total amount
+        // 6. Calculate total amount server-side from DB prices
         double totalAmount = 0;
 
         for (CartItem cartItem : cartItems) {
 
+            ProductRepository.ProductStockRow row =
+                    lockedRows.get(cartItem.getProduct().getId());
+
             totalAmount +=
-                    cartItem.getProduct().getPrice()
+                    row.getPrice()
                             * cartItem.getQuantity();
         }
 
-        // 6. Create Order
+        // 7. Create Order
         Order order = new Order();
 
         order.setUser(cart.getUser());
@@ -92,41 +151,53 @@ public class OrderService {
         Order savedOrder =
                 orderRepository.save(order);
 
-        // 7. Create OrderItems + reduce stock
+        // 8. Create OrderItems + reduce stock atomically
         for (CartItem cartItem : cartItems) {
 
-            Product product =
-                    cartItem.getProduct();
+            Long productId = cartItem.getProduct().getId();
+
+            Product productReference =
+                    productRepository.getReferenceById(productId);
 
             OrderItem orderItem =
                     new OrderItem();
 
             orderItem.setOrder(savedOrder);
 
-            orderItem.setProduct(product);
+            orderItem.setProduct(productReference);
 
             orderItem.setQuantity(
                     cartItem.getQuantity()
             );
 
             orderItem.setPrice(
-                    product.getPrice()
+                    lockedRows.get(productId).getPrice()
             );
 
             orderItemRepository.save(orderItem);
 
-            product.setStock(
-                    product.getStock()
-                            - cartItem.getQuantity()
-            );
+            int updatedRows = productRepository.reduceStock(
+                    productId,
+                    cartItem.getQuantity());
 
-            productRepository.save(product);
+            if (updatedRows != 1) {
+
+                // Defensive: can only happen if stock changed
+                // after our validation - roll everything back.
+                throw new BusinessException(
+                        lockedRows.get(productId).getName()
+                                + " has insufficient stock");
+            }
         }
 
-        // 8. Clear cart
-        cartItemRepository.deleteAll(cartItems);
+        // 9. Clear cart items within the same transaction
+        cartItemRepository.deleteAllInBatch(cartItems);
 
-        // 9. Prepare user response
+        // 10. Reset authoritative cart total to 0
+        cart.setTotalAmount(0.0);
+        cartRepository.save(cart);
+
+        // 11. Prepare user response
         User user = savedOrder.getUser();
 
         UserResponseDTO userResponseDTO =
@@ -136,7 +207,7 @@ public class OrderService {
                         user.getEmail()
                 );
 
-        // 10. Return response
+        // 12. Return response
         return new OrderResponseDTO(
                 savedOrder.getId(),
                 userResponseDTO,
@@ -174,7 +245,7 @@ public class OrderService {
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() ->
-                        new RuntimeException("Order not found"));
+                        new ResourceNotFoundException("Order not found with id: " + orderId));
 
         User currentUser = getCurrentUser(authentication);
 

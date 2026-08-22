@@ -1,6 +1,8 @@
 import {
     createContext,
+    useCallback,
     useContext,
+    useEffect,
     useState,
     type ReactNode
 } from "react";
@@ -38,7 +40,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     };
 
-    const logout = () => {
+    const logout = useCallback(() => {
 
         localStorage.removeItem("token");
 
@@ -46,7 +48,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         setUser(null);
 
-    };
+    }, []);
+
+    useEffect(() => {
+
+        const handleSessionExpired = () => {
+            logout();
+        };
+
+        window.addEventListener("auth:expired", handleSessionExpired);
+
+        return () => {
+            window.removeEventListener("auth:expired", handleSessionExpired);
+        };
+
+    }, [logout]);
 
     return (
 

@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import AuthService from "../services/AuthService";
+import { notifyError } from "../services/api";
+import { toast } from "react-toastify";
 
 const PASSWORD_PATTERN = /^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[@#$%^&+=!]).*$/;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -62,20 +64,11 @@ function Register() {
 
         try {
             await AuthService.register({ name: name.trim(), email: email.trim(), password });
-            alert("Registration successful. Please login.");
+            toast.success("Registration successful. Please login.");
             navigate("/login");
         }
         catch (error: unknown) {
-            console.error("Registration failed:", error);
-
-            const status = (error as { response?: { status?: number } })?.response?.status;
-            const message = (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
-
-            if (status === 409) {
-                setServerError("Email is already registered.");
-            } else {
-                setServerError(message || "Registration failed. Please try again.");
-            }
+            setServerError(notifyError(error, "Registration failed. Please try again."));
         }
     };
 
