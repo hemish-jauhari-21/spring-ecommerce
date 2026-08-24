@@ -54,29 +54,22 @@ export interface OrderDetailsResponse {
 
 class OrderService {
 
-    async placeOrder(
-        userId: number
-    ): Promise<OrderResponse> {
+    async placeOrder(): Promise<OrderResponse> {
 
         const response =
             await api.post<OrderResponse>(
-                "/order/place",
-                {
-                    userId: userId
-                }
+                "/order/place"
             );
 
         return response.data;
     }
 
 
-    async getOrdersByUser(
-        userId: number
-    ): Promise<OrderResponse[]> {
+    async getMyOrders(): Promise<OrderResponse[]> {
 
         const response =
             await api.get<OrderResponse[]>(
-                `/order/user/${userId}`
+                "/order/me"
             );
 
         return response.data;

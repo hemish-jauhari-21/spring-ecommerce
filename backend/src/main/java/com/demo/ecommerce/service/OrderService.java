@@ -1,15 +1,22 @@
 package com.demo.ecommerce.service;
 
 import com.demo.ecommerce.dto.*;
+import com.demo.ecommerce.exception.BusinessException;
+import com.demo.ecommerce.exception.ResourceNotFoundException;
 import com.demo.ecommerce.model.*;
 import com.demo.ecommerce.repository.*;
+import com.demo.ecommerce.security.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class OrderService {
@@ -31,82 +38,109 @@ public class OrderService {
     @Autowired
     private ProductRepository productRepository;
 
-    public OrderResponseDTO createOrder(OrderDTO request) {
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+    @Autowired
+    private CartService cartService;
 
-        Order order = new Order();
-
-        order.setUser(user);
-        order.setStatus("PENDING");
-        order.setTotalAmount(0.0);
-        order.setCreatedAt(LocalDateTime.now());
-
-        Order saveOrder = orderRepository.save(order);
-
-        UserResponseDTO userResponseDTO = new UserResponseDTO(
-                user.getId(),
-                user.getName(),
-                user.getEmail()
-        );
-
-        return new OrderResponseDTO(
-                saveOrder.getId(),
-                userResponseDTO,
-                saveOrder.getTotalAmount(),
-                saveOrder.getStatus(),
-                saveOrder.getCreatedAt()
-        );
+    private User getCurrentUser(Authentication authentication) {
+        return SecurityUtils.getCurrentUser(authentication, userRepository);
     }
 
+    // --------------------------------------------------
+    // Place an order from the current user's cart.
+    //
+    // All-or-nothing: stock validation, order creation,
+    // stock reduction and cart clearing run inside a
+    // single transaction - any failure rolls everything
+    // back (no partial orders, no partial stock loss,
+    // cart stays intact).
+    //
+    // Concurrency: product rows are locked with a native
+    // SELECT ... FOR UPDATE scalar projection. A scalar
+    // projection is required because entities already in
+    // the persistence context would hide concurrent
+    // commits; the scalar rows are always fresh. The
+    // final decrement is additionally guarded by
+    // "stock >= quantity" so overselling is impossible.
+    //
+    // The total is always calculated server-side from
+    // the database product price * quantity. Client
+    // totals are never trusted.
+    // --------------------------------------------------
+
     @Transactional
-    public OrderResponseDTO placeOrder(PlaceOrderDTO request) {
+    public OrderResponseDTO placeOrder(Authentication authentication) {
+
+        User currentUser = getCurrentUser(authentication);
 
         // 1. Find user's cart
-        Cart cart = cartRepository.findByUserId(request.getUserId())
+        Cart cart = cartRepository.findByUserId(currentUser.getId())
                 .orElseThrow(() ->
-                        new RuntimeException("Cart not found"));
-
+                        new ResourceNotFoundException("Cart not found"));
 
         // 2. Get cart items
         List<CartItem> cartItems =
                 cartItemRepository.findByCartId(cart.getId());
 
-
         // 3. Check if cart is empty
         if (cartItems.isEmpty()) {
-            throw new RuntimeException("Cart is empty");
+            throw new BusinessException("Cart is empty");
         }
 
+        // 4. Lock all referenced products and read their
+        // CURRENT stock/price. Sorted ids keep the lock
+        // order deterministic across transactions.
+        List<Long> sortedProductIds = cartItems.stream()
+                .map(item -> item.getProduct().getId())
+                .distinct()
+                .sorted()
+                .toList();
 
-        // 4. Check stock BEFORE creating the order
+        Map<Long, ProductRepository.ProductStockRow> lockedRows =
+                productRepository.findStockForUpdate(sortedProductIds)
+                        .stream()
+                        .collect(Collectors.toMap(
+                                ProductRepository.ProductStockRow::getId,
+                                Function.identity()));
+
+        // 5. Validate stock against the locked (fresh) data
         for (CartItem cartItem : cartItems) {
 
-            Product product = cartItem.getProduct();
+            ProductRepository.ProductStockRow row =
+                    lockedRows.get(cartItem.getProduct().getId());
 
-            if (product.getStock() < cartItem.getQuantity()) {
+            int availableStock =
+                    row.getStock() != null ? row.getStock() : 0;
 
-                throw new RuntimeException(
-                        product.getName()
-                                + " has insufficient stock. Available: "
-                                + product.getStock()
-                );
+            if (cartItem.getQuantity() > availableStock) {
+
+                if (availableStock <= 0) {
+                    throw new BusinessException(
+                            row.getName() + " is out of stock");
+                }
+
+                throw new BusinessException(
+                        "Only "
+                                + availableStock
+                                + " units of "
+                                + row.getName()
+                                + " are available.");
             }
         }
 
-
-        // 5. Calculate total amount
+        // 6. Calculate total amount server-side from DB prices
         double totalAmount = 0;
 
         for (CartItem cartItem : cartItems) {
 
+            ProductRepository.ProductStockRow row =
+                    lockedRows.get(cartItem.getProduct().getId());
+
             totalAmount +=
-                    cartItem.getProduct().getPrice()
+                    row.getPrice()
                             * cartItem.getQuantity();
         }
 
-
-        // 6. Create Order
+        // 7. Create Order
         Order order = new Order();
 
         order.setUser(cart.getUser());
@@ -117,49 +151,53 @@ public class OrderService {
         Order savedOrder =
                 orderRepository.save(order);
 
-
-        // 7. Create OrderItems + reduce stock
+        // 8. Create OrderItems + reduce stock atomically
         for (CartItem cartItem : cartItems) {
 
-            Product product =
-                    cartItem.getProduct();
+            Long productId = cartItem.getProduct().getId();
 
+            Product productReference =
+                    productRepository.getReferenceById(productId);
 
-            // Create OrderItem
             OrderItem orderItem =
                     new OrderItem();
 
             orderItem.setOrder(savedOrder);
 
-            orderItem.setProduct(product);
+            orderItem.setProduct(productReference);
 
             orderItem.setQuantity(
                     cartItem.getQuantity()
             );
 
             orderItem.setPrice(
-                    product.getPrice()
+                    lockedRows.get(productId).getPrice()
             );
-
 
             orderItemRepository.save(orderItem);
 
+            int updatedRows = productRepository.reduceStock(
+                    productId,
+                    cartItem.getQuantity());
 
-            // Reduce stock
-            product.setStock(
-                    product.getStock()
-                            - cartItem.getQuantity()
-            );
+            if (updatedRows != 1) {
 
-            productRepository.save(product);
+                // Defensive: can only happen if stock changed
+                // after our validation - roll everything back.
+                throw new BusinessException(
+                        lockedRows.get(productId).getName()
+                                + " has insufficient stock");
+            }
         }
 
+        // 9. Clear cart items within the same transaction
+        cartItemRepository.deleteAllInBatch(cartItems);
 
-        // 8. Clear cart
-        cartItemRepository.deleteAll(cartItems);
+        // 10. Reset authoritative cart total to 0
+        cart.setTotalAmount(0.0);
+        cartRepository.save(cart);
 
-
-        // 9. Prepare user response
+        // 11. Prepare user response
         User user = savedOrder.getUser();
 
         UserResponseDTO userResponseDTO =
@@ -169,8 +207,7 @@ public class OrderService {
                         user.getEmail()
                 );
 
-
-        // 10. Return response
+        // 12. Return response
         return new OrderResponseDTO(
                 savedOrder.getId(),
                 userResponseDTO,
@@ -180,39 +217,45 @@ public class OrderService {
         );
     }
 
-    public List<OrderResponseDTO> getOrdersByUser(Long userId) {
-        List<Order> orders = orderRepository.findByUserId(userId);
+    public List<OrderResponseDTO> getOrdersByUser(Authentication authentication) {
+        User currentUser = getCurrentUser(authentication);
+
+        List<Order> orders = orderRepository.findByUserId(currentUser.getId());
 
         return orders.stream()
-                .map(order -> {
-
-                    User user = order.getUser();
-
-                    UserResponseDTO userResponseDTO =
-                            new UserResponseDTO(
-                                    user.getId(),
-                                    user.getName(),
-                                    user.getEmail()
-                            );
-
-                    return new OrderResponseDTO(
-                            order.getId(),
-                            userResponseDTO,
-                            order.getTotalAmount(),
-                            order.getStatus(),
-                            order.getCreatedAt()
-                    );
-
-                })
+                .map(this::toOrderResponse)
                 .toList();
     }
 
-    public OrderDetailsResponseDTO getOrderDetails(Long orderId) {
+    public List<OrderResponseDTO> getOrdersByUserId(Long userId,
+                                                    Authentication authentication) {
+        if (!SecurityUtils.hasRole(authentication, "ROLE_ADMIN")) {
+            throw new AccessDeniedException("ADMIN access required");
+        }
+
+        List<Order> orders = orderRepository.findByUserId(userId);
+
+        return orders.stream()
+                .map(this::toOrderResponse)
+                .toList();
+    }
+
+    public OrderDetailsResponseDTO getOrderDetails(Long orderId,
+                                                   Authentication authentication) {
 
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() ->
-                        new RuntimeException("Order not found"));
+                        new ResourceNotFoundException("Order not found with id: " + orderId));
 
+        User currentUser = getCurrentUser(authentication);
+
+        boolean isOwner = order.getUser() != null
+                && order.getUser().getId().equals(currentUser.getId());
+
+        if (!isOwner
+                && !SecurityUtils.hasRole(authentication, "ROLE_ADMIN")) {
+            throw new AccessDeniedException("You do not have access to this order");
+        }
 
         User user = order.getUser();
 
@@ -223,10 +266,8 @@ public class OrderService {
                         user.getEmail()
                 );
 
-
         List<OrderItem> orderItems =
                 orderItemRepository.findByOrderId(orderId);
-
 
         List<OrderItemResponseDTO> itemDTOs =
                 orderItems.stream()
@@ -256,7 +297,6 @@ public class OrderService {
                         })
                         .toList();
 
-
         return new OrderDetailsResponseDTO(
                 order.getId(),
                 userResponseDTO,
@@ -264,6 +304,26 @@ public class OrderService {
                 order.getStatus(),
                 order.getCreatedAt(),
                 itemDTOs
+        );
+    }
+
+    private OrderResponseDTO toOrderResponse(Order order) {
+
+        User user = order.getUser();
+
+        UserResponseDTO userResponseDTO =
+                new UserResponseDTO(
+                        user.getId(),
+                        user.getName(),
+                        user.getEmail()
+                );
+
+        return new OrderResponseDTO(
+                order.getId(),
+                userResponseDTO,
+                order.getTotalAmount(),
+                order.getStatus(),
+                order.getCreatedAt()
         );
     }
 }

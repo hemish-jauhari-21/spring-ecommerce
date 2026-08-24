@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 
 import ProductService from "../services/ProductService";
+import { notifyError } from "../services/api";
 
 import type { Product } from "../types/Product";
 import ProductCard from "../components/ProductCard";
 
 function Products() {
 
-    const [products, setProducts] = useState([]);
+    const [products, setProducts] = useState<Product[]>([]);
 
     useEffect(() => {
         const fetchProducts = async () => {
@@ -15,7 +16,7 @@ function Products() {
                 const data = await ProductService.getAllProducts();
                 setProducts(data);
             } catch (error) {
-                console.error(error);
+                notifyError(error, "Unable to load products.");
             }
         };
 

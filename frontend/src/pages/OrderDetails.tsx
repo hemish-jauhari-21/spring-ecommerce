@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 
 import OrderService from "../services/OrderService";
 import type { OrderDetailsResponse } from "../services/OrderService";
+import { getErrorMessage } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
 function OrderDetails() {
@@ -38,22 +39,15 @@ function OrderDetails() {
                         Number(id)
                     );
 
-                console.log(
-                    "Order details received:",
-                    data
-                );
-
                 setOrder(data);
 
             } catch (error) {
 
-                console.error(
-                    "Error loading order:",
-                    error
-                );
-
                 setError(
-                    "Unable to load order details."
+                    getErrorMessage(
+                        error,
+                        "Unable to load order details."
+                    )
                 );
 
             } finally {

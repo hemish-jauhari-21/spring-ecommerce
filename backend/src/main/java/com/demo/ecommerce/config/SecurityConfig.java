@@ -1,10 +1,13 @@
 package com.demo.ecommerce.config;
 
+import com.demo.ecommerce.exception.ErrorResponseUtil;
+import com.demo.ecommerce.security.JwtAuthenticationEntryPoint;
 import com.demo.ecommerce.security.JwtAuthenticationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -20,6 +23,9 @@ public class SecurityConfig {
 
     @Autowired
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @Autowired
+    private JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
     @Bean
     public PasswordEncoder passwordEncoder() {
@@ -39,6 +45,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
 
                         // Public APIs
+                        .requestMatchers("/error").permitAll()
+
                         .requestMatchers("/api/v1/ecommerce/auth/**").permitAll()
 
                         .requestMatchers(HttpMethod.GET,
@@ -60,6 +68,26 @@ public class SecurityConfig {
                                 "/api/v1/ecommerce/products/**"
                         ).hasRole("ADMIN")
 
+                        // User management is ADMIN only
+                        .requestMatchers(
+                                "/api/v1/ecommerce/user/**"
+                        ).hasRole("ADMIN")
+
+                        // Global cart-item listing is ADMIN only
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/ecommerce/cart-item/all"
+                        ).hasRole("ADMIN")
+
+                        // Cross-user cart/order lookups are ADMIN only
+                        .requestMatchers(
+                                "/api/v1/ecommerce/cart/user/**"
+                        ).hasRole("ADMIN")
+
+                        .requestMatchers(
+                                "/api/v1/ecommerce/order/user/**"
+                        ).hasRole("ADMIN")
+
                         // Everything else requires login
                         .anyRequest().authenticated()
                 )
@@ -67,6 +95,18 @@ public class SecurityConfig {
                 .addFilterBefore(
                         jwtAuthenticationFilter,
                         UsernamePasswordAuthenticationFilter.class
+                )
+
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+                        .accessDeniedHandler((request, response, accessDeniedException) ->
+                                ErrorResponseUtil.write(
+                                        response,
+                                        request,
+                                        HttpStatus.FORBIDDEN,
+                                        "You do not have permission to access this resource"
+                                )
+                        )
                 );
 
         return http.build();

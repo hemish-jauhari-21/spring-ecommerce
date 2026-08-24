@@ -7,6 +7,7 @@ import Home from "../pages/Home";
 import Cart from "../pages/Cart";
 import Orders from "../pages/Orders";
 import Login from "../pages/Login";
+import Register from "../pages/Register";
 import Products from "../pages/Products";
 import ManageProducts from "../pages/ManageProducts";
 import AdminRoute from "../components/AdminRoute";
@@ -33,6 +34,7 @@ function AppRoutes() {
                     </ProtectedRoute>} />
 
                     <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
 
                     <Route 
                         path="/admin/products"

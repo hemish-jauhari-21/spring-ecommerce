@@ -1,13 +1,13 @@
 package com.demo.ecommerce.service;
 
 import com.demo.ecommerce.dto.ProductDTO;
+import com.demo.ecommerce.exception.ResourceNotFoundException;
 import com.demo.ecommerce.model.Product;
 import com.demo.ecommerce.repository.ProductRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class ProductService {
@@ -31,20 +31,21 @@ public class ProductService {
         return repository.findAll();
     }
 
-    public Optional<Product> getProductById(Long id) {
-        return repository.findById(id);
+    public Product getProductById(Long id) {
+        return repository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
     }
 
     public void deleteProductById(Long id) {
         if (!repository.existsById(id)) {
-            throw new RuntimeException("Product not found");
+            throw new ResourceNotFoundException("Product not found with id: " + id);
         }
         repository.deleteById(id);
     }
 
     public Product updateProduct(Long id, ProductDTO request) {
         Product product = repository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Product Not FOund"));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found with id: " + id));
 
         product.setName(request.getName());
         product.setPrice(request.getPrice());
