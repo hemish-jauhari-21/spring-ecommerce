@@ -50,4 +50,13 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     @Query("update Product p set p.stock = p.stock - :quantity "
             + "where p.id = :id and p.stock >= :quantity")
     int reduceStock(@Param("id") Long id, @Param("quantity") int quantity);
+
+    // Atomic increment used ONLY by order cancellation to
+    // give back what a purchase consumed. Inverse of
+    // reduceStock so cancellation never forks a second
+    // stock-management mechanism.
+    @Modifying
+    @Query("update Product p set p.stock = p.stock + :quantity "
+            + "where p.id = :id")
+    int restoreStock(@Param("id") Long id, @Param("quantity") int quantity);
 }

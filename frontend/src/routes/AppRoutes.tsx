@@ -16,6 +16,7 @@ import EditProduct from "../pages/EditProduct";
 import ProductDetails from "../pages/ProductDetails";
 import Checkout from "../pages/Checkout";
 import OrderDetails from "../pages/OrderDetails";
+import AdminOrders from "../pages/AdminOrders";
 
 function AppRoutes() {
     return (
@@ -64,8 +65,19 @@ function AppRoutes() {
                     <Route path="/products/:id" element={<ProductDetails />} />
 
                     <Route path="/checkout" element={<Checkout />}/>
-                    
-                    <Route path="/orders/:id" element={<OrderDetails />} />
+
+                    <Route path="/orders/:id" element={<ProtectedRoute>
+                        <OrderDetails />
+                    </ProtectedRoute>} />
+
+                    <Route
+                        path="/admin/orders"
+                        element={
+                            <AdminRoute>
+                                <AdminOrders />
+                            </AdminRoute>
+                        }
+                    />
                 </Route>
             </Routes>
         </BrowserRouter>

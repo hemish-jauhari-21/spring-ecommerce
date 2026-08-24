@@ -88,6 +88,17 @@ public class SecurityConfig {
                                 "/api/v1/ecommerce/order/user/**"
                         ).hasRole("ADMIN")
 
+                        // Order management is ADMIN only
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/v1/ecommerce/order/all"
+                        ).hasRole("ADMIN")
+
+                        .requestMatchers(
+                                HttpMethod.PUT,
+                                "/api/v1/ecommerce/order/*/status"
+                        ).hasRole("ADMIN")
+
                         // Everything else requires login
                         .anyRequest().authenticated()
                 )

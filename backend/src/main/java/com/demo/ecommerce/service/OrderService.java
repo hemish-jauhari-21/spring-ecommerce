@@ -13,13 +13,41 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
 public class OrderService {
+
+    // --------------------------------------------------
+    // The single source of truth for order lifecycle.
+    //
+    // PENDING   -> CONFIRMED | CANCELLED
+    // CONFIRMED -> SHIPPED   | CANCELLED
+    // SHIPPED   -> DELIVERED
+    // DELIVERED / CANCELLED are terminal states.
+    // --------------------------------------------------
+
+    private static final Map<OrderStatus, Set<OrderStatus>> ALLOWED_TRANSITIONS = Map.of(
+            OrderStatus.PENDING,
+            EnumSet.of(OrderStatus.CONFIRMED, OrderStatus.CANCELLED),
+
+            OrderStatus.CONFIRMED,
+            EnumSet.of(OrderStatus.SHIPPED, OrderStatus.CANCELLED),
+
+            OrderStatus.SHIPPED,
+            EnumSet.of(OrderStatus.DELIVERED),
+
+            OrderStatus.DELIVERED,
+            EnumSet.noneOf(OrderStatus.class),
+
+            OrderStatus.CANCELLED,
+            EnumSet.noneOf(OrderStatus.class)
+    );
     @Autowired
     private OrderRepository orderRepository;
 
@@ -145,7 +173,7 @@ public class OrderService {
 
         order.setUser(cart.getUser());
         order.setTotalAmount(totalAmount);
-        order.setStatus("PENDING");
+        order.setStatus(OrderStatus.PENDING);
         order.setCreatedAt(LocalDateTime.now());
 
         Order savedOrder =
@@ -238,6 +266,144 @@ public class OrderService {
         return orders.stream()
                 .map(this::toOrderResponse)
                 .toList();
+    }
+
+    // --------------------------------------------------
+    // ADMIN only: every order in the system, newest first.
+    // Enforced here AND in SecurityConfig - the backend
+    // check is authoritative.
+    // --------------------------------------------------
+
+    public List<OrderResponseDTO> getAllOrders(Authentication authentication) {
+
+        if (!SecurityUtils.hasRole(authentication, "ROLE_ADMIN")) {
+            throw new AccessDeniedException("ADMIN access required");
+        }
+
+        return orderRepository.findAllByOrderByCreatedAtDesc()
+                .stream()
+                .map(this::toOrderResponse)
+                .toList();
+    }
+
+    // --------------------------------------------------
+    // ADMIN only: move an order through its lifecycle.
+    //
+    // The status column is updated with an atomic
+    // compare-and-swap (status = expected -> new). This
+    // makes the transition itself the lock: exactly one
+    // concurrent request can win, so the stock
+    // restoration performed on cancellation can never
+    // run twice for the same order.
+    //
+    // Stock restore + status change share one
+    // transaction - a failure rolls both back.
+    // --------------------------------------------------
+
+    @Transactional
+    public OrderResponseDTO updateOrderStatus(Long orderId,
+                                              OrderStatus newStatus,
+                                              Authentication authentication) {
+
+        if (!SecurityUtils.hasRole(authentication, "ROLE_ADMIN")) {
+            throw new AccessDeniedException("ADMIN access required");
+        }
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Order not found with id: " + orderId));
+
+        OrderStatus currentStatus = order.getStatus();
+
+        Set<OrderStatus> allowedTargets =
+                ALLOWED_TRANSITIONS.getOrDefault(
+                        currentStatus,
+                        EnumSet.noneOf(OrderStatus.class));
+
+        if (!allowedTargets.contains(newStatus)) {
+            throw new BusinessException(buildInvalidTransitionMessage(currentStatus, newStatus));
+        }
+
+        int updatedRows = orderRepository.updateStatusIfCurrent(
+                orderId,
+                currentStatus,
+                newStatus);
+
+        if (updatedRows != 1) {
+
+            // A concurrent request already moved the status:
+            // this request must not touch stock or state.
+            throw new BusinessException(
+                    "Order status was just changed by another update. Please reload and try again.");
+        }
+
+        // Keep the managed entity in sync with the bulk
+        // update so the response and any flush agree on
+        // the new status.
+        order.setStatus(newStatus);
+
+        if (newStatus == OrderStatus.CANCELLED) {
+            restoreStockForOrder(orderId);
+        }
+
+        return toOrderResponse(order);
+    }
+
+    private String buildInvalidTransitionMessage(OrderStatus currentStatus,
+                                                 OrderStatus targetStatus) {
+
+        return switch (currentStatus) {
+            case DELIVERED ->
+                    "Order is delivered. Its status can no longer be changed.";
+            case CANCELLED ->
+                    "Order is cancelled. Its status can no longer be changed.";
+            default ->
+                    "Cannot change order status from "
+                            + currentStatus
+                            + " to "
+                            + targetStatus;
+        };
+    }
+
+    // --------------------------------------------------
+    // Give back what the purchase consumed.
+    //
+    // Reuses checkout's concurrency-safe mechanism: the
+    // same native FOR UPDATE scalar projection locks the
+    // product rows (deterministic sorted order), then an
+    // atomic increment mirrors reduceStock. Only reached
+    // from a winning cancellation transition, so stock
+    // can never be restored twice.
+    // --------------------------------------------------
+
+    private void restoreStockForOrder(Long orderId) {
+
+        List<OrderItem> orderItems =
+                orderItemRepository.findByOrderId(orderId);
+
+        List<Long> sortedProductIds = orderItems.stream()
+                .map(item -> item.getProduct().getId())
+                .distinct()
+                .sorted()
+                .toList();
+
+        if (!sortedProductIds.isEmpty()) {
+            productRepository.findStockForUpdate(sortedProductIds);
+        }
+
+        for (OrderItem orderItem : orderItems) {
+
+            int quantity =
+                    orderItem.getQuantity() != null
+                            ? orderItem.getQuantity()
+                            : 0;
+
+            if (quantity > 0) {
+                productRepository.restoreStock(
+                        orderItem.getProduct().getId(),
+                        quantity);
+            }
+        }
     }
 
     public OrderDetailsResponseDTO getOrderDetails(Long orderId,

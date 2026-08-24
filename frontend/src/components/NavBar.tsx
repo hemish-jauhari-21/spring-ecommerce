@@ -52,6 +52,10 @@ function Navbar() {
                                     Manage Products
                                 </Link>
 
+                                <Link className="nav-link" to="/admin/orders">
+                                    Admin Orders
+                                </Link>
+
                                 <Link className="nav-link" to="/orders">
                                     Orders
                                 </Link>
