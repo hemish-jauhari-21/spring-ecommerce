@@ -1,19 +1,16 @@
 package com.demo.ecommerce.dto;
 
 import com.demo.ecommerce.model.OrderStatus;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
-
-import java.time.LocalDateTime;
 
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @ToString
-public class OrderResponseDTO {
-    private Long id;
-    private UserResponseDTO user;
-    private Double totalAmount;
+public class OrderStatusUpdateDTO {
+
+    @NotNull(message = "Status is required")
     private OrderStatus status;
-    private LocalDateTime createdAt;
 }

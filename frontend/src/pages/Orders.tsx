@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 import OrderService from "../services/OrderService";
 import { getErrorMessage } from "../services/api";
 import type { OrderResponse } from "../services/OrderService";
+import OrderStatusBadge from "../components/OrderStatusBadge";
 
 function Orders() {
 
@@ -167,11 +168,9 @@ function Orders() {
 
                                     <td>
 
-                                        <span className="badge bg-warning text-dark">
-
-                                            {order.status}
-
-                                        </span>
+                                        <OrderStatusBadge
+                                            status={order.status}
+                                        />
 
                                     </td>
 

@@ -1,4 +1,5 @@
 import api from "./api";
+import type { OrderStatus } from "../types/OrderStatus";
 
 export interface OrderResponse {
     id: number;
@@ -10,7 +11,7 @@ export interface OrderResponse {
     };
 
     totalAmount: number;
-    status: string;
+    status: OrderStatus;
     createdAt: string;
 }
 
@@ -45,7 +46,7 @@ export interface OrderDetailsResponse {
     };
 
     totalAmount: number;
-    status: string;
+    status: OrderStatus;
     createdAt: string;
 
     items: OrderItemResponse[];
@@ -76,6 +77,17 @@ class OrderService {
     }
 
 
+    async getAllOrders(): Promise<OrderResponse[]> {
+
+        const response =
+            await api.get<OrderResponse[]>(
+                "/order/all"
+            );
+
+        return response.data;
+    }
+
+
     async getOrderDetails(
         orderId: number
     ): Promise<OrderDetailsResponse> {
@@ -83,6 +95,21 @@ class OrderService {
         const response =
             await api.get<OrderDetailsResponse>(
                 `/order/${orderId}`
+            );
+
+        return response.data;
+    }
+
+
+    async updateOrderStatus(
+        orderId: number,
+        status: OrderStatus
+    ): Promise<OrderResponse> {
+
+        const response =
+            await api.put<OrderResponse>(
+                `/order/${orderId}/status`,
+                { status }
             );
 
         return response.data;

@@ -23,6 +23,9 @@ public class Order {
     private User user;
 
     private Double totalAmount;
-    private String status;
+
+    @Enumerated(EnumType.STRING)
+    private OrderStatus status;
+
     private LocalDateTime createdAt;
 }
