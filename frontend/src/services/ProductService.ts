@@ -1,4 +1,5 @@
 import type { Product } from "../types/Product";
+import type { ProductPageResponse, ProductSearchParams } from "../types/ProductSearch";
 import api from "./api";
 import type { ProductRequest } from "../types/ProductRequest";
 
@@ -8,6 +9,16 @@ class ProductService {
 
         const response = await api.get<Product[]>("/products/all");
 
+        return response.data;
+    }
+
+    async searchProducts(params: ProductSearchParams): Promise<ProductPageResponse> {
+        const response = await api.get<ProductPageResponse>("/products/search", { params });
+        return response.data;
+    }
+
+    async getCategories(): Promise<string[]> {
+        const response = await api.get<string[]>("/products/categories");
         return response.data;
     }
 
