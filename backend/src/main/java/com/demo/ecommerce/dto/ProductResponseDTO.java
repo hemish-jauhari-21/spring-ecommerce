@@ -1,5 +1,6 @@
 package com.demo.ecommerce.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 
 @Getter
@@ -13,5 +14,6 @@ public class ProductResponseDTO {
     private String description;
     private Integer stock;
     private String category;
+    @JsonProperty("image_url")
     private String imageUrl;
 }
