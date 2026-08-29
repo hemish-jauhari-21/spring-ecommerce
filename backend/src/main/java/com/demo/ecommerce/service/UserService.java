@@ -1,6 +1,8 @@
 package com.demo.ecommerce.service;
 
 import com.demo.ecommerce.dto.UserDTO;
+import com.demo.ecommerce.dto.UserProfileDTO;
+import com.demo.ecommerce.dto.UserUpdateDTO;
 import com.demo.ecommerce.exception.DuplicateResourceException;
 import com.demo.ecommerce.exception.ResourceNotFoundException;
 import com.demo.ecommerce.model.Role;
@@ -70,5 +72,30 @@ public class UserService {
         user.setPassword(passwordEncoder.encode(request.getPassword()));
 
         return repository.save(user);
+    }
+
+    public UserProfileDTO getProfile(User currentUser) {
+        UserProfileDTO profile = new UserProfileDTO();
+        profile.setId(currentUser.getId());
+        profile.setName(currentUser.getName());
+        profile.setEmail(currentUser.getEmail());
+        profile.setRole(currentUser.getRole().name());
+        return profile;
+    }
+
+    public User updateProfile(User currentUser, UserUpdateDTO request) {
+        Optional<User> userWithEmail = repository.findByEmail(request.getEmail());
+        if (userWithEmail.isPresent() && !userWithEmail.get().getId().equals(currentUser.getId())) {
+            throw new DuplicateResourceException("Email is already registered");
+        }
+
+        currentUser.setName(request.getName());
+        currentUser.setEmail(request.getEmail());
+
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            currentUser.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+
+        return repository.save(currentUser);
     }
 }

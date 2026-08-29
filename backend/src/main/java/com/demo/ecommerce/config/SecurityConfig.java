@@ -68,6 +68,13 @@ public class SecurityConfig {
                                 "/api/v1/ecommerce/products/**"
                         ).hasRole("ADMIN")
 
+                        // User profile (own account) is for any authenticated user
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/ecommerce/user/me").authenticated()
+
+                        .requestMatchers(HttpMethod.PUT,
+                                "/api/v1/ecommerce/user/me").authenticated()
+
                         // User management is ADMIN only
                         .requestMatchers(
                                 "/api/v1/ecommerce/user/**"
