@@ -5,6 +5,44 @@ import { notifyError } from "../services/api";
 import type { ProductRequest } from "../types/ProductRequest";
 import { toast } from "react-toastify";
 
+type FormErrors = Partial<Record<keyof ProductRequest, string>>;
+
+function validate(product: ProductRequest): FormErrors {
+    const errors: FormErrors = {};
+
+    if (!product.name.trim()) {
+        errors.name = "Product name is required.";
+    } else if (product.name.trim().length > 255) {
+        errors.name = "Product name must not exceed 255 characters.";
+    }
+
+    if (!product.description.trim()) {
+        errors.description = "Description is required.";
+    } else if (product.description.trim().length > 1000) {
+        errors.description = "Description must not exceed 1000 characters.";
+    }
+
+    if (product.price === null || product.price === undefined || product.price === 0) {
+        errors.price = "Price is required.";
+    } else if (product.price <= 0) {
+        errors.price = "Price must be greater than 0.";
+    }
+
+    if (product.stock === null || product.stock === undefined) {
+        errors.stock = "Stock is required.";
+    } else if (product.stock < 0) {
+        errors.stock = "Stock cannot be less than 0.";
+    }
+
+    if (!product.category.trim()) {
+        errors.category = "Category is required.";
+    } else if (product.category.trim().length > 100) {
+        errors.category = "Category must not exceed 100 characters.";
+    }
+
+    return errors;
+}
+
 function AddProduct() {
 
     const navigate = useNavigate();
@@ -17,6 +55,9 @@ function AddProduct() {
         category: "",
         image_url: ""
     });
+
+    const [errors, setErrors] = useState<FormErrors>({});
+    const [loading, setLoading] = useState(false);
 
     const handleChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -31,11 +72,27 @@ function AddProduct() {
                     ? Number(value)
                     : value
         }));
+
+        if (errors[name as keyof ProductRequest]) {
+            setErrors(prev => {
+                const next = { ...prev };
+                delete next[name as keyof ProductRequest];
+                return next;
+            });
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 
         e.preventDefault();
+
+        const validationErrors = validate(product);
+        if (Object.keys(validationErrors).length > 0) {
+            setErrors(validationErrors);
+            return;
+        }
+
+        setLoading(true);
 
         try {
 
@@ -51,6 +108,9 @@ function AddProduct() {
 
             notifyError(error, "Failed to add product.");
 
+        }
+        finally {
+            setLoading(false);
         }
 
     };
@@ -83,12 +143,15 @@ function AddProduct() {
 
                                     <input
                                         type="text"
-                                        className="form-control"
+                                        className={`form-control${errors.name ? " is-invalid" : ""}`}
                                         name="name"
                                         value={product.name}
                                         onChange={handleChange}
-                                        required
                                     />
+
+                                    {errors.name && (
+                                        <div className="invalid-feedback">{errors.name}</div>
+                                    )}
 
                                 </div>
 
@@ -99,13 +162,16 @@ function AddProduct() {
                                     </label>
 
                                     <textarea
-                                        className="form-control"
+                                        className={`form-control${errors.description ? " is-invalid" : ""}`}
                                         rows={4}
                                         name="description"
                                         value={product.description}
                                         onChange={handleChange}
-                                        required
                                     />
+
+                                    {errors.description && (
+                                        <div className="invalid-feedback">{errors.description}</div>
+                                    )}
 
                                 </div>
 
@@ -117,12 +183,17 @@ function AddProduct() {
 
                                     <input
                                         type="number"
-                                        className="form-control"
+                                        className={`form-control${errors.price ? " is-invalid" : ""}`}
                                         name="price"
                                         value={product.price}
                                         onChange={handleChange}
-                                        required
+                                        min="0.01"
+                                        step="0.01"
                                     />
+
+                                    {errors.price && (
+                                        <div className="invalid-feedback">{errors.price}</div>
+                                    )}
 
                                 </div>
 
@@ -134,12 +205,16 @@ function AddProduct() {
 
                                     <input
                                         type="number"
-                                        className="form-control"
+                                        className={`form-control${errors.stock ? " is-invalid" : ""}`}
                                         name="stock"
                                         value={product.stock}
                                         onChange={handleChange}
-                                        required
+                                        min="0"
                                     />
+
+                                    {errors.stock && (
+                                        <div className="invalid-feedback">{errors.stock}</div>
+                                    )}
 
                                 </div>
 
@@ -151,12 +226,15 @@ function AddProduct() {
 
                                     <input
                                         type="text"
-                                        className="form-control"
+                                        className={`form-control${errors.category ? " is-invalid" : ""}`}
                                         name="category"
                                         value={product.category}
                                         onChange={handleChange}
-                                        required
                                     />
+
+                                    {errors.category && (
+                                        <div className="invalid-feedback">{errors.category}</div>
+                                    )}
 
                                 </div>
 
@@ -172,7 +250,6 @@ function AddProduct() {
                                         name="image_url"
                                         value={product.image_url}
                                         onChange={handleChange}
-                                        required
                                     />
 
                                 </div>
@@ -180,14 +257,16 @@ function AddProduct() {
                                 <button
                                     type="submit"
                                     className="btn btn-success me-3"
+                                    disabled={loading}
                                 >
-                                    Save Product
+                                    {loading ? "Saving..." : "Save Product"}
                                 </button>
 
                                 <button
                                     type="button"
                                     className="btn btn-secondary"
                                     onClick={() => navigate("/admin/products")}
+                                    disabled={loading}
                                 >
                                     Cancel
                                 </button>
