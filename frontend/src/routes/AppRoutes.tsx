@@ -17,6 +17,7 @@ import ProductDetails from "../pages/ProductDetails";
 import Checkout from "../pages/Checkout";
 import OrderDetails from "../pages/OrderDetails";
 import AdminOrders from "../pages/AdminOrders";
+import MyAccount from "../pages/MyAccount";
 
 function AppRoutes() {
     return (
@@ -68,6 +69,10 @@ function AppRoutes() {
 
                     <Route path="/orders/:id" element={<ProtectedRoute>
                         <OrderDetails />
+                    </ProtectedRoute>} />
+
+                    <Route path="/account" element={<ProtectedRoute>
+                        <MyAccount />
                     </ProtectedRoute>} />
 
                     <Route

@@ -75,6 +75,14 @@ function Navbar() {
                         )
                     }
 
+                    {
+                        user && (
+                            <Link className="nav-link" to="/account">
+                                My Account
+                            </Link>
+                        )
+                    }
+
                     {user ? (
                         <button className="btn btn-danger" onClick={handleLogout}>
                             Logout

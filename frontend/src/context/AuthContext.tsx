@@ -17,6 +17,8 @@ interface AuthContextType {
 
     logout: () => void;
 
+    updateProfile: (user: AuthResponse) => void;
+
     isAuthenticated: boolean;
 
 }
@@ -50,6 +52,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     }, []);
 
+    const updateProfile = (userData: AuthResponse) => {
+
+        localStorage.setItem("user", JSON.stringify(userData));
+
+        setUser(userData);
+
+    };
+
     useEffect(() => {
 
         const handleSessionExpired = () => {
@@ -71,6 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 user,
                 login,
                 logout,
+                updateProfile,
                 isAuthenticated: !!user
             }}
         >
