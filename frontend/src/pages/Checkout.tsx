@@ -109,7 +109,7 @@ function Checkout() {
                 `Order placed successfully! Order ID: ${order.id}`
             );
 
-            navigate("/orders");
+            navigate(`/orders/${order.id}`);
 
         } catch (error) {
 
@@ -240,6 +240,10 @@ function Checkout() {
                     <tr>
 
                         <th>
+                            Image
+                        </th>
+
+                        <th>
                             Product
                         </th>
 
@@ -265,6 +269,24 @@ function Checkout() {
                     {cartItems.map(item => (
 
                         <tr key={item.id}>
+
+                            <td>
+
+                                {item.product.image_url && (
+
+                                    <img
+                                        src={item.product.image_url}
+                                        alt={item.product.name}
+                                        style={{
+                                            width: "50px",
+                                            height: "50px",
+                                            objectFit: "contain"
+                                        }}
+                                    />
+
+                                )}
+
+                            </td>
 
                             <td>
                                 {item.product.name}

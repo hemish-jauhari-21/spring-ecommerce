@@ -26,6 +26,8 @@ function ProductDetails() {
 
     const [addingToCart, setAddingToCart] = useState(false);
 
+    const [imgError, setImgError] = useState(false);
+
 
     // Add product to cart
     const handleAddToCart = async () => {
@@ -159,16 +161,30 @@ function ProductDetails() {
 
                 <div className="col-md-6">
 
-                    <img
-                        src={product.image_url}
-                        alt={product.name}
-                        className="img-fluid rounded"
-                        style={{
-                            maxHeight: "450px",
-                            width: "100%",
-                            objectFit: "contain"
-                        }}
-                    />
+                    {product.image_url && !imgError ? (
+                        <img
+                            src={product.image_url}
+                            alt={product.name}
+                            className="img-fluid rounded"
+                            style={{
+                                maxHeight: "450px",
+                                width: "100%",
+                                objectFit: "contain"
+                            }}
+                            onError={() => setImgError(true)}
+                        />
+                    ) : (
+                        <div
+                            className="d-flex align-items-center justify-content-center bg-light text-muted rounded"
+                            style={{
+                                maxHeight: "450px",
+                                width: "100%",
+                                height: "300px"
+                            }}
+                        >
+                            No Image Available
+                        </div>
+                    )}
 
                 </div>
 
