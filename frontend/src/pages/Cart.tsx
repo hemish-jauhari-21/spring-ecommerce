@@ -225,11 +225,22 @@ function Cart() {
 
             {cartItems.length === 0 ? (
 
-                <div className="alert alert-info">
+                <>
 
-                    Your cart is empty.
+                    <div className="alert alert-info">
 
-                </div>
+                        Your cart is empty.
+
+                    </div>
+
+                    <button
+                        className="btn btn-primary"
+                        onClick={() => navigate("/products")}
+                    >
+                        Continue Shopping
+                    </button>
+
+                </>
 
             ) : (
 
@@ -240,6 +251,10 @@ function Cart() {
                         <thead>
 
                             <tr>
+
+                                <th>
+                                    Image
+                                </th>
 
                                 <th>
                                     Product
@@ -280,6 +295,28 @@ function Cart() {
                                 return (
 
                                     <tr key={item.id}>
+
+                                        <td>
+
+                                            {item.product.image_url && (
+
+                                                <img
+
+                                                    src={item.product.image_url}
+
+                                                    alt={item.product.name}
+
+                                                    style={{
+                                                        width: "60px",
+                                                        height: "60px",
+                                                        objectFit: "contain"
+                                                    }}
+
+                                                />
+
+                                            )}
+
+                                        </td>
 
                                         <td>
 
@@ -425,6 +462,15 @@ function Cart() {
                             }
                         >
                             Proceed to Checkout
+                        </button>
+
+                        <button
+                            className="btn btn-outline-secondary mt-2 ms-2"
+                            onClick={() =>
+                                navigate("/products")
+                            }
+                        >
+                            Continue Shopping
                         </button>
 
                     </div>
