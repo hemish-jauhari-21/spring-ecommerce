@@ -114,6 +114,19 @@ class OrderService {
 
         return response.data;
     }
+
+
+    async cancelOrder(
+        orderId: number
+    ): Promise<OrderResponse> {
+
+        const response =
+            await api.put<OrderResponse>(
+                `/order/${orderId}/cancel`
+            );
+
+        return response.data;
+    }
 }
 
 

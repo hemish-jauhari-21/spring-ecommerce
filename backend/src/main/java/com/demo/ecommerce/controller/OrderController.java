@@ -55,4 +55,11 @@ public class OrderController {
                 request.getStatus(),
                 authentication);
     }
+
+    // Authenticated user: cancel own PENDING order
+    @PutMapping("/{orderId}/cancel")
+    public OrderResponseDTO cancelOrder(@PathVariable Long orderId,
+                                        Authentication authentication) {
+        return orderService.cancelOrder(orderId, authentication);
+    }
 }
