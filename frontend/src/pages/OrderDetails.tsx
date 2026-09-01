@@ -1,11 +1,13 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "react-toastify";
 
 import OrderService from "../services/OrderService";
 import type { OrderDetailsResponse } from "../services/OrderService";
 import { getErrorMessage } from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import OrderStatusBadge from "../components/OrderStatusBadge";
+import type { OrderStatus } from "../types/OrderStatus";
 
 function OrderDetails() {
 
@@ -23,6 +25,12 @@ function OrderDetails() {
 
     const [error, setError] =
         useState("");
+
+    const [cancelling, setCancelling] =
+        useState(false);
+
+    const [reloadKey, setReloadKey] =
+        useState(0);
 
 
     useEffect(() => {
@@ -61,7 +69,45 @@ function OrderDetails() {
 
         loadOrder();
 
-    }, [user, id]);
+    }, [user, id, reloadKey]);
+
+
+    const handleCancel = async () => {
+
+        if (!order) return;
+
+        const confirmed = window.confirm(
+            "Are you sure you want to cancel this order?"
+        );
+
+        if (!confirmed) return;
+
+        setCancelling(true);
+
+        try {
+
+            await OrderService.cancelOrder(order.id);
+
+            toast.success("Order cancelled successfully.");
+
+            setReloadKey(prev => prev + 1);
+
+        } catch (error) {
+
+            toast.error(
+                getErrorMessage(
+                    error,
+                    "Unable to cancel order."
+                )
+            );
+
+        } finally {
+
+            setCancelling(false);
+
+        }
+
+    };
 
 
     // User is not logged in
@@ -148,12 +194,32 @@ function OrderDetails() {
                     Order #{order.id}
                 </h2>
 
-                <button
-                    className="btn btn-outline-secondary"
-                    onClick={() => navigate("/orders")}
-                >
-                    Back to Orders
-                </button>
+                <div className="d-flex gap-2">
+
+                    {order.status === "PENDING" as OrderStatus &&
+                        user &&
+                        order.user.id === user.id && (
+
+                        <button
+                            className="btn btn-danger"
+                            onClick={handleCancel}
+                            disabled={cancelling}
+                        >
+                            {cancelling
+                                ? "Cancelling..."
+                                : "Cancel Order"}
+                        </button>
+
+                    )}
+
+                    <button
+                        className="btn btn-outline-secondary"
+                        onClick={() => navigate("/orders")}
+                    >
+                        Back to Orders
+                    </button>
+
+                </div>
 
             </div>
 

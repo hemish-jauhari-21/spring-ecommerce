@@ -406,6 +406,55 @@ public class OrderService {
         }
     }
 
+    // --------------------------------------------------
+    // USER only: cancel their own order.
+    //
+    // Only PENDING orders can be cancelled.
+    // Uses the same atomic compare-and-swap and stock
+    // restoration as the admin endpoint.
+    // --------------------------------------------------
+
+    @Transactional
+    public OrderResponseDTO cancelOrder(Long orderId,
+                                        Authentication authentication) {
+
+        User currentUser = getCurrentUser(authentication);
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Order not found with id: " + orderId));
+
+        boolean isOwner = order.getUser() != null
+                && order.getUser().getId().equals(currentUser.getId());
+
+        if (!isOwner) {
+            throw new AccessDeniedException("You do not have permission to cancel this order");
+        }
+
+        OrderStatus currentStatus = order.getStatus();
+
+        if (currentStatus != OrderStatus.PENDING) {
+            throw new BusinessException(
+                    "Only PENDING orders can be cancelled. Current status: " + currentStatus);
+        }
+
+        int updatedRows = orderRepository.updateStatusIfCurrent(
+                orderId,
+                currentStatus,
+                OrderStatus.CANCELLED);
+
+        if (updatedRows != 1) {
+            throw new BusinessException(
+                    "Order status was just changed by another update. Please reload and try again.");
+        }
+
+        order.setStatus(OrderStatus.CANCELLED);
+
+        restoreStockForOrder(orderId);
+
+        return toOrderResponse(order);
+    }
+
     public OrderDetailsResponseDTO getOrderDetails(Long orderId,
                                                    Authentication authentication) {
 
