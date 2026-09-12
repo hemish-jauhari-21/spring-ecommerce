@@ -4,7 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import ProductService from "../services/ProductService";
 import { getErrorMessage, notifyError } from "../services/api";
 import type { Product } from "../types/Product";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import CartItemService from "../services/CartItemService";
 import { toast } from "react-toastify";
 

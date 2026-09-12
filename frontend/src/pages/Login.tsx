@@ -1,5 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import { useState } from "react";
 import AuthService from "../services/AuthService";
 import { notifyError } from "../services/api";

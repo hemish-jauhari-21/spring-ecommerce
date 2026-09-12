@@ -1,6 +1,6 @@
 import { Navigate } from "react-router-dom";
 import type { JSX } from "react/jsx-runtime";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 
 function ProtectedRoute ({children} : {children: JSX.Element}) {
     const { user } = useAuth();
