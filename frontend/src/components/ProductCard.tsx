@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 
 import type { Product } from "../types/Product";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 import CartItemService from "../services/CartItemService";
 import { notifyError } from "../services/api";
 

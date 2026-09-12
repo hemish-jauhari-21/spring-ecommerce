@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import UserService from "../services/UserService";
 import { notifyError } from "../services/api";
 import { toast } from "react-toastify";
-import { useAuth } from "../context/AuthContext";
+import { useAuth } from "../hooks/useAuth";
 
 type FormErrors = Partial<Record<string, string>>;
 
