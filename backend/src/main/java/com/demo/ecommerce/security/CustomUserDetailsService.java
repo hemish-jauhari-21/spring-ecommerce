@@ -29,14 +29,3 @@ public class CustomUserDetailsService implements UserDetailsService {
         );
     }
 }
-
-
-//When a user logs in, Spring Security needs to answer one question:
-//
-//        "How do I find this user from my database?"
-//
-//Spring itself doesn't know anything about your User entity or your users table.
-//
-//So we have to teach it.
-
-// This is done through interface UserDetailsService

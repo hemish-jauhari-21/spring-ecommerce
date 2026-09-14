@@ -1,13 +1,12 @@
 package com.demo.ecommerce.security;
 
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.Jwts;
 
 @Service
 public class JwtService {
@@ -45,9 +44,3 @@ public class JwtService {
         }
     }
 }
-
-
-// JWT has 3 parts: 1.Header 2.Payload 3.Signature
-
-// hmacShaKeyFor converts String to Secret Key
-// HMAC-SHA stands for Hash-based Message Authentication Code using a Secure Hash Algorithm

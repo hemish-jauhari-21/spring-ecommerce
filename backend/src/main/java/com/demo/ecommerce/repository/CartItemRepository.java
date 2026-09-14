@@ -1,6 +1,5 @@
 package com.demo.ecommerce.repository;
 
-import com.demo.ecommerce.dto.CartItemResponseDTO;
 import com.demo.ecommerce.model.CartItem;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
