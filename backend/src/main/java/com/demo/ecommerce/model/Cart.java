@@ -3,8 +3,6 @@ package com.demo.ecommerce.model;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.time.LocalDate;
-
 @Entity
 @Table(name = "cart")
 @Getter
