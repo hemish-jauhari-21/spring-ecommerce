@@ -8,7 +8,7 @@ function MainLayout() {
         <>
             <NavBar />
 
-            <main className="container mt-4">
+            <main className="flex-grow-1" style={{ paddingTop: "1rem" }}>
                 <Outlet />
             </main>
 

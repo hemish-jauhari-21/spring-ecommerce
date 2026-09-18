@@ -226,112 +226,122 @@ function Products() {
     return (
         <div className="container mt-4">
 
-            <h2 className="mb-4">Products</h2>
+            <div className="products-header">
+                <h2>Products</h2>
+                {totalElements > 0 && (
+                    <span className="products-result-count">
+                        {totalElements} product{totalElements !== 1 ? "s" : ""} found
+                    </span>
+                )}
+            </div>
 
-            <div className="card mb-4">
-                <div className="card-body">
-                    <div className="row g-3 align-items-end">
+            <div className="products-filter-section">
+                <div className="row g-3 align-items-end">
 
-                        <div className="col-md-4">
-                            <label className="form-label fw-bold">Search</label>
-                            <input
-                                type="text"
-                                className="form-control"
-                                placeholder="Search products..."
-                                value={keyword}
-                                onChange={(e) => setKeyword(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                            />
-                        </div>
+                    <div className="col-lg-3 col-md-4 col-sm-6">
+                        <label className="form-label">Search</label>
+                        <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Search products..."
+                            value={keyword}
+                            onChange={(e) => setKeyword(e.target.value)}
+                            onKeyDown={handleKeyDown}
+                        />
+                    </div>
 
-                        <div className="col-md-2">
-                            <label className="form-label fw-bold">Category</label>
-                            <select
-                                className="form-select"
-                                value={category}
-                                onChange={handleCategoryChange}
-                            >
-                                <option value="">All Categories</option>
-                                {categories.map((cat) => (
-                                    <option key={cat} value={cat}>
-                                        {cat}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                    <div className="col-lg-2 col-md-3 col-sm-6">
+                        <label className="form-label">Category</label>
+                        <select
+                            className="form-select"
+                            value={category}
+                            onChange={handleCategoryChange}
+                        >
+                            <option value="">All Categories</option>
+                            {categories.map((cat) => (
+                                <option key={cat} value={cat}>
+                                    {cat}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
 
-                        <div className="col-md-1">
-                            <label className="form-label fw-bold">Min Price</label>
-                            <input
-                                type="number"
-                                className="form-control"
-                                placeholder="0"
-                                min="0"
-                                value={minPrice}
-                                onChange={(e) => setMinPrice(e.target.value)}
-                            />
-                        </div>
+                    <div className="col-lg-2 col-md-2 col-sm-4">
+                        <label className="form-label">Min Price</label>
+                        <input
+                            type="number"
+                            className="form-control"
+                            placeholder="0"
+                            min="0"
+                            value={minPrice}
+                            onChange={(e) => setMinPrice(e.target.value)}
+                        />
+                    </div>
 
-                        <div className="col-md-1">
-                            <label className="form-label fw-bold">Max Price</label>
-                            <input
-                                type="number"
-                                className="form-control"
-                                placeholder="Any"
-                                min="0"
-                                value={maxPrice}
-                                onChange={(e) => setMaxPrice(e.target.value)}
-                            />
-                        </div>
+                    <div className="col-lg-2 col-md-2 col-sm-4">
+                        <label className="form-label">Max Price</label>
+                        <input
+                            type="number"
+                            className="form-control"
+                            placeholder="Any"
+                            min="0"
+                            value={maxPrice}
+                            onChange={(e) => setMaxPrice(e.target.value)}
+                        />
+                    </div>
 
-                        <div className="col-md-2">
-                            <label className="form-label fw-bold">Sort By</label>
-                            <select
-                                className="form-select"
-                                value={sortOption}
-                                onChange={handleSortChange}
-                            >
-                                {SORT_OPTIONS.map((opt) => (
-                                    <option key={opt.value} value={opt.value}>
-                                        {opt.label}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
+                    <div className="col-lg-2 col-md-3 col-sm-4">
+                        <label className="form-label">Sort By</label>
+                        <select
+                            className="form-select"
+                            value={sortOption}
+                            onChange={handleSortChange}
+                        >
+                            {SORT_OPTIONS.map((opt) => (
+                                <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
 
-                        <div className="col-md-2 d-flex gap-2">
+                    <div className="col-lg-1 col-md-1 col-sm-12">
+                        <div className="products-filter-actions">
                             <button
-                                className="btn btn-primary"
+                                className="btn btn-primary btn-sm"
                                 onClick={handleSearch}
                             >
                                 Search
                             </button>
                             <button
-                                className="btn btn-outline-secondary"
+                                className="btn btn-outline-secondary btn-sm"
                                 onClick={handleReset}
                             >
                                 Reset
                             </button>
                         </div>
-
                     </div>
+
                 </div>
             </div>
 
-            {totalElements > 0 && (
-                <p className="text-muted mb-3">
-                    {totalElements} product{totalElements !== 1 ? "s" : ""} found — Page {page + 1} of {totalPages}
-                </p>
-            )}
-
             {loading ? (
-                <div className="text-center py-5">
+                <div className="products-loading">
                     <div className="spinner-border" role="status">
                         <span className="visually-hidden">Loading...</span>
                     </div>
+                    <span>Loading products...</span>
                 </div>
             ) : products.length === 0 ? (
-                <div className="alert alert-info">No products found.</div>
+                <div className="products-empty">
+                    <p>No products match your current filters.</p>
+                    <button
+                        className="btn btn-primary btn-sm"
+                        onClick={handleReset}
+                    >
+                        Reset Filters
+                    </button>
+                </div>
             ) : (
                 <>
                     <div className="row">
@@ -346,7 +356,7 @@ function Products() {
                     </div>
 
                     {totalPages > 1 && (
-                        <nav className="mt-4">
+                        <nav className="products-pagination" aria-label="Product pagination">
                             <ul className="pagination justify-content-center">
                                 <li className={`page-item ${first ? "disabled" : ""}`}>
                                     <button

@@ -49,40 +49,33 @@ function ProductCard({ product }: ProductCardProps) {
 
     return (
         <div
-            className="card h-100 shadow-sm"
-            style={{ cursor: "pointer" }}
+            className="product-card"
             onClick={handleCardClick}
         >
-            {product.image_url && !imgError ? (
-                <img
-                    src={product.image_url}
-                    className="card-img-top"
-                    alt={product.name}
-                    style={{ height: "220px", objectFit: "cover" }}
-                    onError={() => setImgError(true)}
-                />
-            ) : (
-                <div
-                    className="card-img-top d-flex align-items-center justify-content-center bg-light text-muted"
-                    style={{ height: "220px" }}
-                >
-                    No Image
-                </div>
-            )}
+            <div className="product-card-image-wrap">
+                {product.image_url && !imgError ? (
+                    <img
+                        src={product.image_url}
+                        alt={product.name}
+                        onError={() => setImgError(true)}
+                    />
+                ) : (
+                    <span className="product-card-no-image">No Image</span>
+                )}
+                {product.category && (
+                    <span className="product-card-category">{product.category}</span>
+                )}
+            </div>
 
-            <div className="card-body d-flex flex-column">
-                <h5 className="card-title">{product.name}</h5>
-                <p className="card-text text-muted">{product.description}</p>
-                <h4 className="text-success">₹ {product.price}</h4>
-                <p>
-                    {outOfStock ? (
-                        <span className="text-danger fw-bold">Out of Stock</span>
-                    ) : (
-                        <>Stock: {product.stock}</>
-                    )}
+            <div className="product-card-body">
+                <h5 className="product-card-name">{product.name}</h5>
+                <p className="product-card-description">{product.description}</p>
+                <div className="product-card-price">₹ {product.price}</div>
+                <p className={`product-card-stock ${outOfStock ? "out-of-stock" : "in-stock"}`}>
+                    {outOfStock ? "Out of Stock" : `In Stock: ${product.stock}`}
                 </p>
                 <button
-                    className="btn btn-primary mt-auto"
+                    className="btn btn-primary product-card-btn"
                     disabled={outOfStock || addingToCart}
                     onClick={handleAddToCart}
                 >

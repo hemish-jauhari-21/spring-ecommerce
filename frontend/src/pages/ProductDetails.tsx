@@ -110,12 +110,13 @@ function ProductDetails() {
     if (loading) {
 
         return (
-            <div className="container mt-5">
-
-                <h3>
-                    Loading product...
-                </h3>
-
+            <div className="container mt-4">
+                <div className="pd-loading">
+                    <div className="spinner-border" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                    </div>
+                    <span>Loading product...</span>
+                </div>
             </div>
         );
 
@@ -126,26 +127,17 @@ function ProductDetails() {
     if (error || !product) {
 
         return (
-
-            <div className="container mt-5">
-
-                <div className="alert alert-danger">
-
-                    {error || "Product not found."}
-
+            <div className="container mt-4">
+                <div className="pd-error">
+                    <p>{error || "Product not found."}</p>
+                    <button
+                        className="btn btn-primary"
+                        onClick={() => navigate("/products")}
+                    >
+                        Back to Products
+                    </button>
                 </div>
-
-                <button
-                    className="btn btn-secondary"
-                    onClick={() =>
-                        navigate("/products")
-                    }
-                >
-                    Back to Products
-                </button>
-
             </div>
-
         );
 
     }
@@ -153,38 +145,25 @@ function ProductDetails() {
 
     return (
 
-        <div className="container mt-5">
+        <div className="container mt-4">
 
-            <div className="row">
+            <div className="row g-4">
 
                 {/* Product Image */}
 
                 <div className="col-md-6">
 
-                    {product.image_url && !imgError ? (
-                        <img
-                            src={product.image_url}
-                            alt={product.name}
-                            className="img-fluid rounded"
-                            style={{
-                                maxHeight: "450px",
-                                width: "100%",
-                                objectFit: "contain"
-                            }}
-                            onError={() => setImgError(true)}
-                        />
-                    ) : (
-                        <div
-                            className="d-flex align-items-center justify-content-center bg-light text-muted rounded"
-                            style={{
-                                maxHeight: "450px",
-                                width: "100%",
-                                height: "300px"
-                            }}
-                        >
-                            No Image Available
-                        </div>
-                    )}
+                    <div className="pd-image-wrap">
+                        {product.image_url && !imgError ? (
+                            <img
+                                src={product.image_url}
+                                alt={product.name}
+                                onError={() => setImgError(true)}
+                            />
+                        ) : (
+                            <span className="pd-no-image">No Image Available</span>
+                        )}
+                    </div>
 
                 </div>
 
@@ -193,182 +172,92 @@ function ProductDetails() {
 
                 <div className="col-md-6">
 
-                    <h1>
-                        {product.name}
-                    </h1>
+                    {/* Category */}
+                    <span className="pd-category">{product.category}</span>
 
-                    <hr />
-
+                    {/* Name */}
+                    <h1 className="pd-name">{product.name}</h1>
 
                     {/* Price */}
-
-                    <h3 className="text-success">
-
-                        ₹ {product.price}
-
-                    </h3>
-
+                    <div className="pd-price">₹ {product.price}</div>
 
                     {/* Description */}
-
-                    <p className="mt-3">
-
-                        {product.description}
-
-                    </p>
-
-
-                    {/* Category */}
-
-                    <p>
-
-                        <strong>
-                            Category:
-                        </strong>{" "}
-
-                        {product.category}
-
-                    </p>
-
+                    <p className="pd-description">{product.description}</p>
 
                     {/* Stock availability */}
-
-                    <p>
-
-                        {product.stock > 0 ? (
-
-                            <span className="text-success">
-
-                                <strong>
-                                    Availability:
-                                </strong>{" "}
-
-                                Available: {product.stock}
-
-                            </span>
-
-                        ) : (
-
-                            <span className="text-danger">
-
-                                <strong>Out of Stock</strong>
-
-                            </span>
-
-                        )}
-
+                    <p className={`pd-stock ${product.stock > 0 ? "in-stock" : "out-of-stock"}`}>
+                        {product.stock > 0
+                            ? `In Stock — ${product.stock} available`
+                            : "Out of Stock"
+                        }
                     </p>
 
-
                     {/* Quantity + Add to Cart */}
-
                     {product.stock > 0 ? (
 
-                        <>
-
-                            <div className="d-flex align-items-center mb-3">
-
-                                <label className="me-3 fw-bold">
-
-                                    Quantity:
-
-                                </label>
-
-
-                                {/* Decrease */}
-
+                        <div className="pd-qty">
+                            <span className="pd-qty-label">Qty</span>
+                            <div className="pd-qty-controls">
                                 <button
                                     type="button"
-                                    className="btn btn-outline-secondary"
                                     onClick={() =>
-                                        setQuantity(
-                                            prev =>
-                                                Math.max(
-                                                    1,
-                                                    prev - 1
-                                                )
+                                        setQuantity(prev =>
+                                            Math.max(1, prev - 1)
                                         )
                                     }
                                     disabled={quantity <= 1}
+                                    aria-label="Decrease quantity"
                                 >
-                                    -
+                                    −
                                 </button>
-
-
-                                {/* Quantity */}
-
-                                <span className="mx-3 fw-bold">
-
-                                    {quantity}
-
-                                </span>
-
-
-                                {/* Increase */}
-
+                                <span className="pd-qty-display">{quantity}</span>
                                 <button
                                     type="button"
-                                    className="btn btn-outline-secondary"
                                     onClick={() =>
-                                        setQuantity(
-                                            prev =>
-                                                Math.min(
-                                                    product.stock,
-                                                    prev + 1
-                                                )
+                                        setQuantity(prev =>
+                                            Math.min(product.stock, prev + 1)
                                         )
                                     }
-                                    disabled={
-                                        quantity >=
-                                        product.stock
-                                    }
+                                    disabled={quantity >= product.stock}
+                                    aria-label="Increase quantity"
                                 >
                                     +
                                 </button>
-
                             </div>
+                        </div>
+
+                    ) : null}
 
 
-                            {/* Add to Cart */}
+                    <div className="pd-actions">
 
+                        {product.stock > 0 ? (
                             <button
                                 type="button"
-                                className="btn btn-primary me-2"
+                                className="btn btn-primary"
                                 onClick={handleAddToCart}
                                 disabled={addingToCart}
                             >
-
-                                {addingToCart
-                                    ? "Adding..."
-                                    : "Add to Cart"}
-
+                                {addingToCart ? "Adding..." : "Add to Cart"}
                             </button>
-
-                        </>
-
-                    ) : (
+                        ) : (
+                            <button
+                                className="btn btn-primary"
+                                disabled
+                            >
+                                Out of Stock
+                            </button>
+                        )}
 
                         <button
-                            className="btn btn-secondary"
-                            disabled
+                            type="button"
+                            className="btn btn-outline-secondary"
+                            onClick={() => navigate("/products")}
                         >
-                            Out of Stock
+                            Back to Products
                         </button>
 
-                    )}
-
-
-                    {/* Back */}
-
-                    <button
-                        type="button"
-                        className="btn btn-outline-secondary"
-                        onClick={() =>
-                            navigate("/products")
-                        }
-                    >
-                        Back to Products
-                    </button>
+                    </div>
 
                 </div>
 

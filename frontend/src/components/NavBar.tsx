@@ -1,107 +1,189 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Navbar, Nav, Container, Dropdown } from "react-bootstrap";
 import { useAuth } from "../hooks/useAuth";
-import { useNavigate } from "react-router-dom";
 
 
-function Navbar() {
+function NavBar() {
     const { user, logout } = useAuth();
-    
     const navigate = useNavigate();
+    const location = useLocation();
 
     const handleLogout = () => {
         logout();
         navigate("/login");
     }
 
+    const isActive = (path: string) => location.pathname === path;
+
     return (
-        <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
-            <div className="container">
-
-                <Link className="navbar-brand" to="/">
+        <Navbar expand="lg" className="navbar-light border-bottom" style={{ backgroundColor: "var(--bg-white)" }} sticky="top">
+            <Container>
+                <Navbar.Brand as={Link} to="/" className="fw-semibold" style={{ color: "var(--primary)", fontSize: "1.25rem" }}>
                     E-Commerce
-                </Link>
+                </Navbar.Brand>
 
-                <div className="navbar-nav">
+                <Navbar.Toggle aria-label="Toggle navigation" />
 
-                    <Link className="nav-link" to="/">
-                        Home
-                    </Link>
+                <Navbar.Collapse>
+                    <Nav className="me-auto" style={{ gap: "0.25rem" }}>
+                        <Nav.Link
+                            as={Link}
+                            to="/"
+                            active={isActive("/")}
+                            style={{
+                                color: isActive("/") ? "var(--primary)" : undefined,
+                                fontWeight: isActive("/") ? 600 : undefined,
+                            }}
+                        >
+                            Home
+                        </Nav.Link>
 
-                    <Link className="nav-link" to="/products">
-                        Products
-                    </Link>
+                        <Nav.Link
+                            as={Link}
+                            to="/products"
+                            active={isActive("/products")}
+                            style={{
+                                color: isActive("/products") ? "var(--primary)" : undefined,
+                                fontWeight: isActive("/products") ? 600 : undefined,
+                            }}
+                        >
+                            Products
+                        </Nav.Link>
 
-                    {
-                        user?.role === "USER" && (
+                        {user?.role === "USER" && (
                             <>
-                                <Link className="nav-link" to="/cart">
+                                <Nav.Link
+                                    as={Link}
+                                    to="/cart"
+                                    active={isActive("/cart")}
+                                    style={{
+                                        color: isActive("/cart") ? "var(--primary)" : undefined,
+                                        fontWeight: isActive("/cart") ? 600 : undefined,
+                                    }}
+                                >
                                     Cart
-                                </Link>
+                                </Nav.Link>
 
-                                <Link className="nav-link" to="/orders">
+                                <Nav.Link
+                                    as={Link}
+                                    to="/orders"
+                                    active={isActive("/orders")}
+                                    style={{
+                                        color: isActive("/orders") ? "var(--primary)" : undefined,
+                                        fontWeight: isActive("/orders") ? 600 : undefined,
+                                    }}
+                                >
                                     Orders
-                                </Link>
+                                </Nav.Link>
                             </>
-                        )
-                    }
+                        )}
 
-                    {
-                        user?.role === "ADMIN" && (
+                        {user?.role === "ADMIN" && (
                             <>
-                                <Link className="nav-link" to="/admin/products">
+                                <Nav.Link
+                                    as={Link}
+                                    to="/admin/products"
+                                    active={location.pathname.startsWith("/admin/products")}
+                                    style={{
+                                        color: location.pathname.startsWith("/admin/products") ? "var(--primary)" : undefined,
+                                        fontWeight: location.pathname.startsWith("/admin/products") ? 600 : undefined,
+                                    }}
+                                >
                                     Manage Products
-                                </Link>
+                                </Nav.Link>
 
-                                <Link className="nav-link" to="/admin/orders">
+                                <Nav.Link
+                                    as={Link}
+                                    to="/admin/orders"
+                                    active={isActive("/admin/orders")}
+                                    style={{
+                                        color: isActive("/admin/orders") ? "var(--primary)" : undefined,
+                                        fontWeight: isActive("/admin/orders") ? 600 : undefined,
+                                    }}
+                                >
                                     Admin Orders
-                                </Link>
+                                </Nav.Link>
 
-                                <Link className="nav-link" to="/orders">
+                                <Nav.Link
+                                    as={Link}
+                                    to="/orders"
+                                    active={isActive("/orders")}
+                                    style={{
+                                        color: isActive("/orders") ? "var(--primary)" : undefined,
+                                        fontWeight: isActive("/orders") ? 600 : undefined,
+                                    }}
+                                >
                                     Orders
+                                </Nav.Link>
+                            </>
+                        )}
+                    </Nav>
+
+                    <Nav className="align-items-lg-center" style={{ gap: "0.5rem" }}>
+                        {user ? (
+                            <>
+                                <Dropdown align="end">
+                                    <Dropdown.Toggle
+                                        variant="outline-secondary"
+                                        id="user-dropdown"
+                                        className="d-flex align-items-center gap-2"
+                                        style={{ borderRadius: "var(--radius-sm)" }}
+                                    >
+                                        <span
+                                            className="d-inline-flex align-items-center justify-content-center rounded-circle"
+                                            style={{
+                                                width: "32px",
+                                                height: "32px",
+                                                backgroundColor: "var(--primary-light)",
+                                                color: "var(--primary)",
+                                                fontSize: "0.875rem",
+                                                fontWeight: 600,
+                                            }}
+                                        >
+                                            {user.name?.charAt(0).toUpperCase()}
+                                        </span>
+                                        <span className="d-none d-lg-inline">{user.name}</span>
+                                    </Dropdown.Toggle>
+
+                                    <Dropdown.Menu style={{ minWidth: "180px" }}>
+                                        <Dropdown.Item as={Link} to="/account">
+                                            My Account
+                                        </Dropdown.Item>
+                                        <Dropdown.Divider />
+                                        <Dropdown.Item onClick={handleLogout} className="text-danger">
+                                            Logout
+                                        </Dropdown.Item>
+                                    </Dropdown.Menu>
+                                </Dropdown>
+                            </>
+                        ) : (
+                            <>
+                                <Nav.Link
+                                    as={Link}
+                                    to="/login"
+                                    active={isActive("/login")}
+                                    style={{
+                                        color: isActive("/login") ? "var(--primary)" : undefined,
+                                        fontWeight: isActive("/login") ? 600 : undefined,
+                                    }}
+                                >
+                                    Login
+                                </Nav.Link>
+                                <Link to="/register">
+                                    <button
+                                        className="btn btn-primary btn-sm"
+                                        style={{ borderRadius: "var(--radius-sm)" }}
+                                    >
+                                        Register
+                                    </button>
                                 </Link>
                             </>
-                        )
-                    }
-
-                    {/* <Link className="nav-link" to="/login">
-                        Login
-                    </Link> */}
-
-                    {
-                        user && (
-                            <span className="mt-2 me-3 pb-2 text-white">
-                                Welcome, {user.name}
-                            </span>
-                        )
-                    }
-
-                    {
-                        user && (
-                            <Link className="nav-link" to="/account">
-                                My Account
-                            </Link>
-                        )
-                    }
-
-                    {user ? (
-                        <button className="btn btn-danger" onClick={handleLogout}>
-                            Logout
-                        </button>
-                    ) : (
-                        <>
-                            <Link className="nav-link" to="/login">
-                                Login
-                            </Link>
-                            <Link className="nav-link" to="/register">
-                                Register
-                            </Link>
-                        </>
-                    )}
-                </div>
-
-            </div>
-        </nav>
+                        )}
+                    </Nav>
+                </Navbar.Collapse>
+            </Container>
+        </Navbar>
     );
 }
 
-export default Navbar;
+export default NavBar;
